@@ -1,7 +1,8 @@
+using Mirror;
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
-public class FPSController : MonoBehaviour
+public class FPSController : NetworkBehaviour
 {
     [Header("Movement")]
     public float walkSpeed = 5f;
