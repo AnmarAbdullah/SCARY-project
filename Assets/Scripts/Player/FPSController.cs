@@ -16,18 +16,40 @@ public class FPSController : NetworkBehaviour
     public Transform cameraHolder;
 
     private CharacterController _cc;
+    private Camera[] _cameras;
+    private AudioListener[] _audioListeners;
     private Vector3 _velocity;
     private float _xRotation;
 
-    void Start()
+    void Awake()
     {
         _cc = GetComponent<CharacterController>();
+        _cameras = GetComponentsInChildren<Camera>(true);
+        _audioListeners = GetComponentsInChildren<AudioListener>(true);
+    }
+
+    public override void OnStartClient()
+    {
+        SetLocalCameraState(false);
+    }
+
+    public override void OnStartLocalPlayer()
+    {
+        SetLocalCameraState(true);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
+    public override void OnStopLocalPlayer()
+    {
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
     void Update()
     {
+        if (!isLocalPlayer) return;
+        
         HandleLook();
         HandleMovement();
     }
@@ -61,5 +83,14 @@ public class FPSController : NetworkBehaviour
 
         _velocity.y += gravity * Time.deltaTime;
         _cc.Move(_velocity * Time.deltaTime);
+    }
+
+    void SetLocalCameraState(bool active)
+    {
+        foreach (Camera cam in _cameras)
+            cam.enabled = active;
+
+        foreach (AudioListener listener in _audioListeners)
+            listener.enabled = active;
     }
 }
