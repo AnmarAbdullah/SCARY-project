@@ -52,17 +52,30 @@ namespace TimeFracture.Camera
         private float _prevSwayRoll;
         private bool _wasMoving;
 
+        private void Awake()
+        {
+            if (playerBody == null)
+                playerBody = transform;
+
+            if (playerMovement == null && playerBody != null)
+                playerMovement = playerBody.GetComponent<PlayerMovement>();
+
+            if (cameraHolder == null && playerBody != null)
+                cameraHolder = FindCameraHolder(playerBody);
+        }
+
         private void Start()
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-            _yaw = playerBody.eulerAngles.y;
+            if (playerBody != null)
+                _yaw = playerBody.eulerAngles.y;
         }
 
         private void Update() { }
 
         public void Look(Vector2 input)
         {
+            if (playerBody == null || cameraHolder == null) return;
+
             _yaw += input.x;
             _pitch -= input.y;
             _pitch = Mathf.Clamp(_pitch, -pitchLimit, pitchLimit);
@@ -71,11 +84,13 @@ namespace TimeFracture.Camera
 
             UpdateSway();
 
-            // CameraHolder is a root object — must use world rotation including yaw
-            cameraHolder.rotation = Quaternion.Euler(
-                _pitch + _swayPitch + _overshootPitch,
-                _yaw,
-                _swayRoll + _overshootRoll);
+            float finalPitch = _pitch + _swayPitch + _overshootPitch;
+            float finalRoll = _swayRoll + _overshootRoll;
+
+            if (cameraHolder.IsChildOf(playerBody))
+                cameraHolder.localRotation = Quaternion.Euler(finalPitch, 0f, finalRoll);
+            else
+                cameraHolder.rotation = Quaternion.Euler(finalPitch, _yaw, finalRoll);
         }
 
         public void SetSensitivity(float value) => sensitivity = value;
@@ -114,6 +129,22 @@ namespace TimeFracture.Camera
             float dampTime = 1f / overshootDamping;
             _overshootPitch = Mathf.SmoothDamp(_overshootPitch, 0f, ref _overshootPitchVel, dampTime);
             _overshootRoll = Mathf.SmoothDamp(_overshootRoll, 0f, ref _overshootRollVel, dampTime);
+        }
+
+        private static Transform FindCameraHolder(Transform root)
+        {
+            foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "CameraHolder")
+                    return child;
+            }
+
+            UnityEngine.Camera childCamera = root.GetComponentInChildren<UnityEngine.Camera>(true);
+            if (childCamera == null) return null;
+
+            return childCamera.transform.parent != null
+                ? childCamera.transform.parent
+                : childCamera.transform;
         }
     }
 }

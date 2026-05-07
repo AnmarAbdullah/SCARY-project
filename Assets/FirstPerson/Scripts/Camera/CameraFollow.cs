@@ -21,19 +21,57 @@ namespace TimeFracture.Camera
 
         private void Awake()
         {
-            _currentHeight = standHeight;
-            if (target != null)
+            ResolveReferences();
+
+            _currentHeight = IsChildOfTarget()
+                ? transform.localPosition.y
+                : standHeight;
+
+            if (target != null && !IsChildOfTarget())
                 transform.position = target.position + Vector3.up * _currentHeight;
         }
 
         private void LateUpdate()
         {
+            ResolveReferences();
+
             if (target == null) return;
             float targetHeight = (playerMovement != null && playerMovement.IsCrouching)
                                ? crouchHeight : standHeight;
+
+            if (IsChildOfTarget())
+            {
+                if (playerMovement != null && playerMovement.cameraHolder == transform)
+                    return;
+
+                Vector3 localPos = transform.localPosition;
+                localPos.x = Mathf.Lerp(localPos.x, 0f, followSpeed * Time.deltaTime);
+                localPos.y = Mathf.Lerp(localPos.y, targetHeight, crouchSmoothing * Time.deltaTime);
+                localPos.z = Mathf.Lerp(localPos.z, 0f, followSpeed * Time.deltaTime);
+                transform.localPosition = localPos;
+                return;
+            }
+
             _currentHeight = Mathf.Lerp(_currentHeight, targetHeight, crouchSmoothing * Time.deltaTime);
             Vector3 targetPos = target.position + Vector3.up * _currentHeight;
             transform.position = Vector3.Lerp(transform.position, targetPos, followSpeed * Time.deltaTime);
+        }
+
+        private void ResolveReferences()
+        {
+            if (playerMovement == null)
+                playerMovement = GetComponentInParent<PlayerMovement>();
+
+            if (target == null && playerMovement != null)
+                target = playerMovement.transform;
+
+            if (playerMovement == null && target != null)
+                playerMovement = target.GetComponent<PlayerMovement>();
+        }
+
+        private bool IsChildOfTarget()
+        {
+            return target != null && transform.IsChildOf(target);
         }
     }
 }
