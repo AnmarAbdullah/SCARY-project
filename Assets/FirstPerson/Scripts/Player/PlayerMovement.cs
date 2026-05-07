@@ -71,6 +71,9 @@ namespace TimeFracture.Player
             _rb.interpolation    = RigidbodyInterpolation.Interpolate;
             _targetCapsuleHeight = standHeight;
             _audio               = GetComponent<PlayerAudioController>();
+
+            if (cameraHolder == null)
+                cameraHolder = FindChildCameraHolder();
         }
 
         private void FixedUpdate()
@@ -160,11 +163,28 @@ namespace TimeFracture.Player
 
         private void UpdateCameraHeight()
         {
-            if (cameraHolder == null) return;
+            if (cameraHolder == null || !cameraHolder.IsChildOf(transform)) return;
+
             float   targetY = IsCrouching ? crouchCameraY : standCameraY;
             Vector3 pos     = cameraHolder.localPosition;
             pos.y           = Mathf.Lerp(pos.y, targetY, Time.deltaTime * cameraCrouchSmoothing);
             cameraHolder.localPosition = pos;
+        }
+
+        private Transform FindChildCameraHolder()
+        {
+            foreach (Transform child in GetComponentsInChildren<Transform>(true))
+            {
+                if (child.name == "CameraHolder")
+                    return child;
+            }
+
+            UnityEngine.Camera childCamera = GetComponentInChildren<UnityEngine.Camera>(true);
+            if (childCamera == null) return null;
+
+            return childCamera.transform.parent != null
+                ? childCamera.transform.parent
+                : childCamera.transform;
         }
 
         private bool CeilingBlocked()
