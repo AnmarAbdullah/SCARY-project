@@ -1,3 +1,4 @@
+using Dissonance;
 using Mirror;
 using UnityEngine;
 using TimeFracture.Camera;
@@ -50,7 +51,10 @@ namespace TimeFracture.Player
 
             if (idleSway != null && idleSway.playerMovement == null)
                 idleSway.playerMovement = _movement;
+            
+            GetComponent<VoiceBroadcastTrigger>().enabled = !isLocalPlayer;
         }
+        
 
         private void Start()
         {
@@ -61,6 +65,7 @@ namespace TimeFracture.Player
         public override void OnStartClient()
         {
             SetLocalPlayerState(false);
+            GetComponent<VoiceBroadcastTrigger>().enabled = isLocalPlayer;
         }
 
         public override void OnStartLocalPlayer()
