@@ -14,7 +14,7 @@
 # Unity files
 *.asmdef unity-yaml-file -linguist-generated
 *.anim unity-yaml-file
-*.asset unity-yaml-file
+*.asset filter=lfs diff=lfs merge=lfs -text
 *.brush unity-yaml-file
 *.controller unity-yaml-file
 *.flare unity-yaml-file
@@ -22,20 +22,20 @@
 *.giparams unity-yaml-file
 *.guiskin unity-yaml-file
 *.mask unity-yaml-file
-*.mat unity-yaml-file
+*.mat filter=lfs diff=lfs merge=lfs -text
 *.meta unity-yaml-file
 *.mixer unity-yaml-file
 *.overrideController unity-yaml-file
 *.physicMaterial unity-yaml-file
 *.physicsMaterial2D unity-yaml-file
 *.playable unity-yaml-file
-*.prefab unity-yaml-file
+*.prefab filter=lfs diff=lfs merge=lfs -text
 *.preset unity-yaml-file
 *.renderTexture unity-yaml-file
 *.shadervariants unity-yaml-file
 *.spriteatlas unity-yaml-file
 *.terrainlayer unity-yaml-file
-*.unity unity-yaml-file
+*.unity filter=lfs diff=lfs merge=lfs -text
 # Unity binary files
 *.bundle lfs-file
 *.cubemap lfs-file
@@ -117,19 +117,15 @@
 *.gz lfs-file
 *.rar lfs-file
 *.tar lfs-file
-*.asset filter=lfs diff=lfs merge=lfs -text
-*.unity filter=lfs diff=lfs merge=lfs -text
-*.prefab filter=lfs diff=lfs merge=lfs -text
-*.mat filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.tif filter=lfs diff=lfs merge=lfs -text
 *.shader filter=lfs diff=lfs merge=lfs -text
 *.lighting filter=lfs diff=lfs merge=lfs -text
 *.wav filter=lfs diff=lfs merge=lfs -text
 *.mp3 filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
-*.jpeg filter=lfs diff=lfs merge=lfs -text
 *.exr filter=lfs diff=lfs merge=lfs -text
-*.tif filter=lfs diff=lfs merge=lfs -text
 *.tiff filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
 *.obj filter=lfs diff=lfs merge=lfs -text
