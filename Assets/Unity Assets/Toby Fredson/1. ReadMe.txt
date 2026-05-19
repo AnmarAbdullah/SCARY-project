@@ -1,0 +1,30 @@
+   * Product Overview
+
+ This pack includes the "Light" version of The Toby Foliage Engine (TTFE), which has limitations. TTFE is a collection of nature shaders that automatically work in conjunction with PBR shading while internal mesh-based vertex position volumes influence wind physics.
+
+ Unlock the full potential of the complete version here: The Toby Foliage Engine --->
+https://assetstore.unity.com/packages/vfx/shaders/the-toby-foliage-engine-279757
+Try out the light version for free: Toby Foliage Engine - Light --->
+https://assetstore.unity.com/packages/vfx/shaders/the-toby-foliage-engine-light-282901
+
+  * Discounts
+
+Purchasing this pack gives you a $22 discount on "The Toby Foliage Engine" --->
+https://assetstore.unity.com/packages/vfx/shaders/the-toby-foliage-engine-279757
+
+  * Limitations
+
+ X TTFE is designed to work with instancing, static batching is not supported.
+ X Because this pack includes the free version of TTFE, you can't open or edit these shaders with the Amplify Shader Editor (Node functions have been removed). Check out the full version to gain access to the Amplify nodes!
+ X Shader Model 4.5+ capable devices are required (Desktop / High-End Mobile).
+ X While Mobile is supported, the scenes are intended for performance testing and will not be suitable for mobile devices (performance-intensive scenes). Average frame rate 30-50 fps with default settings on lower-end hardware. Further optimization can be achieved.
+
+ * Compatibility
+
+ To ensure compatibility with the old asset pack (The Toby Foliage Engine), this package will use an older scaling method that is slightly larger than the default Unity scale. From this point forward, all new assets will adhere to the default Unity scale.
+
+ * Feedback
+
+ For questions follow the Unity Discussion Thread or contact me via email: florianalexandru05@gmail.com
+
+ Support Discussion Thread: https://discussions.unity.com/t/the-toby-foliage-engine/943171
