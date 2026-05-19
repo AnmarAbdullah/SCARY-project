@@ -1,3 +1,37 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:6d6801b40b728c10fef74023c459e1ec37748322a2591eed689c94922d642e2e
-size 1274
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fb1f766fc0da2845b4d38905b58dbb1, type: 3}
+  m_Name: LevelConfig_New
+  m_EditorClassIdentifier: 
+  gridSize: {x: 10, y: 10}
+  tileSize: 60
+  useFixedSeed: 1
+  fixedSeed: 12345
+  centerTile: {fileID: 11400000, guid: 03c372c5b9b7fce49855e2df3c63bf24, type: 2}
+  tiles:
+  - {fileID: 11400000, guid: fc8d1f49f7cc4374ba1d02925b36c415, type: 2}
+  - {fileID: 11400000, guid: 3fae4e6ae2f8b5e47a9d0221e1360b44, type: 2}
+  - {fileID: 11400000, guid: 1960b46b7f3a8824e9a0e74316819e46, type: 2}
+  fallbackTerrain: {fileID: 11400000, guid: 1960b46b7f3a8824e9a0e74316819e46, type: 2}
+  roadTileSet: {fileID: 11400000, guid: b80207076e160c84a88fef90d118ba05, type: 2}
+  carveRoads: 1
+  roadBranchiness: 0.25
+  connectSpawnsToCores: 1
+  connectSpawnsToObjectives: 1
+  connectCoresToObjectives: 0
+  connectCoresToCores: 1
+  connectObjectivesToObjectives: 0
+  extraRandomConnections: 1
+  pathWindiness: 0.462
+  roadAvoidCategories: 06000000
+  maxPlacementAttempts: 200
+  maxRetries: 3
