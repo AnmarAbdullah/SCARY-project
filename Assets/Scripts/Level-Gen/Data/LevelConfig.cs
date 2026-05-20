@@ -13,14 +13,24 @@ namespace ScaryGame.LevelGen
         [Tooltip("World units per tile. All tile prefabs should fit this footprint.")]
         public float tileSize = 10f;
 
+        [Tooltip("Y position (height) offset for all spawned tiles. Adjust if tiles spawn above or below the terrain.")]
+        public float tileYOffset = 0f;
+
         [Header("Seed")]
         [Tooltip("If true, every generation uses 'fixedSeed'. Useful for testing.")]
         public bool useFixedSeed = false;
         public uint fixedSeed = 12345;
 
-        [Header("Required Center Tile")]
-        [Tooltip("Always placed at grid center. Typically the Monster Base.")]
+        [Header("Enemy Base (Center Tile)")]
+        [Tooltip("Always placed at grid center. The Monster Base.")]
         public TileDefinition centerTile;
+
+        [Header("Base Station")]
+        [Tooltip("List of base station variants with different exit directions. One is randomly chosen per generation. The base station is always placed at the center-bottom of the generated area, connecting to the spawn zone.")]
+        public List<BaseStationVariant> baseStationVariants = new List<BaseStationVariant>();
+
+        [Tooltip("How many cells above the bottom edge to place the base station. 0 = bottom row, 1 = one row up, etc.")]
+        public int baseStationBottomOffset = 1;
 
         [Header("Tile Pool")]
         [Tooltip("Required tiles (minCount > 0) are placed first, then terrain fill from this list.")]
@@ -30,41 +40,26 @@ namespace ScaryGame.LevelGen
         public TileDefinition fallbackTerrain;
 
         [Header("Roads")]
-        [Tooltip("Bundle of road shape variants (straight, curve, T, cross, end-cap). The generator auto-picks shape + rotation per cell from neighbors.")]
+        [Tooltip("Bundle of road shape variants (straight, curve, T, cross). The generator auto-picks shape + rotation per cell from neighbors.")]
         public RoadTileSet roadTileSet;
 
         [Tooltip("Master switch for the road carving phase.")]
         public bool carveRoads = true;
 
-        [Header("Road Network — what connects to what")]
+        [Header("Road Routing (Base Station → Power Cores)")]
         [Range(0f, 1f)]
-        [Tooltip("0 = pure tree (every redundant path is skipped — clean but no branches). 1 = full mesh (every candidate pair is carved — dense). 0.2-0.4 = mostly tree with some extra branches that loop back. Sweet spot for organic networks.")]
+        [Tooltip("0 = pure tree (no redundant paths). 1 = full mesh (every possible path carved). 0.2-0.4 = mostly tree with some extra loops.")]
         public float roadBranchiness = 0.25f;
 
-        [Tooltip("Carve a path from every Spawn to every PowerCore.")]
-        public bool connectSpawnsToCores = true;
-
-        [Tooltip("Carve a path from every Spawn to every Objective. Off by default — spawns reach objectives THROUGH cores, which keeps the road network clean.")]
-        public bool connectSpawnsToObjectives = false;
-
-        [Tooltip("Carve a path from every PowerCore to every Objective.")]
-        public bool connectCoresToObjectives = true;
-
-        [Tooltip("Carve a path between every pair of PowerCores. Off by default — turn on for redundant ring networks.")]
-        public bool connectCoresToCores = false;
-
-        [Tooltip("Carve a path between every pair of Objectives.")]
-        public bool connectObjectivesToObjectives = false;
-
-        [Tooltip("Number of extra random connections between any two endpoints (Spawn/Core/Objective). Adds redundant cycles for variety.")]
-        public int extraRandomConnections = 0;
-
-        [Header("Road Shape — how curvy")]
         [Range(0f, 1f)]
-        [Tooltip("0 = straight Manhattan paths. 1 = paths take dramatic curving detours via random waypoints. Default 0.25 keeps things readable.")]
+        [Tooltip("Chance that a branch will fork to reach multiple cores instead of chaining through them. 0 = no forks. 1 = always fork where possible.")]
+        public float branchForkChance = 0.5f;
+
+        [Range(0f, 1f)]
+        [Tooltip("0 = straight Manhattan paths. 1 = paths take dramatic curving detours via random waypoints.")]
         public float pathWindiness = 0.25f;
 
-        [Tooltip("Categories that road carving must route AROUND (paths cannot enter cells of these categories' adjacent ring). MonsterBase is a sensible default.")]
+        [Tooltip("Categories that road carving must route AROUND. MonsterBase is a sensible default.")]
         public List<TileCategory> roadAvoidCategories = new List<TileCategory> { TileCategory.MonsterBase };
 
         [Header("Generation Limits")]
