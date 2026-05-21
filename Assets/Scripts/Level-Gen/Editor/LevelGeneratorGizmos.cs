@@ -77,8 +77,7 @@ namespace ScaryGame.LevelGen.EditorTools
             {
                 case TileCategory.MonsterBase: return new Color(1f, 0f, 0f, 0.9f);
                 case TileCategory.PowerCore:   return new Color(0f, 0.8f, 1f, 0.9f);
-                case TileCategory.Spawn:       return new Color(0f, 1f, 0f, 0.9f);
-                case TileCategory.Objective:   return new Color(1f, 1f, 0f, 0.9f);
+                case TileCategory.BaseStation: return new Color(0.4f, 1f, 0.2f, 0.9f);
                 case TileCategory.Road:        return new Color(0.7f, 0.5f, 0.2f, 0.7f);
                 case TileCategory.Structure:   return new Color(0.8f, 0.4f, 1f, 0.8f);
                 case TileCategory.Terrain:     return new Color(0.3f, 0.6f, 0.3f, 0.4f);

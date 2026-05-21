@@ -8,9 +8,9 @@ namespace ScaryGame.LevelGen
     /// Server rolls a seed in OnStartServer and writes it to a SyncVar; clients run the same
     /// generator with the same seed, so every client sees an identical map.
     ///
-    /// Networked gameplay actors (objectives, monster) should NOT be spawned by the LevelGenerator.
+    /// Networked gameplay actors (monster, etc.) should NOT be spawned by the LevelGenerator.
     /// Listen to LevelGenerator.OnLevelGenerated and have a server-side spawner walk the grid
-    /// (e.g., look up Objective category cells) and call NetworkServer.Spawn there.
+    /// (e.g., look up PowerCore category cells) and call NetworkServer.Spawn there.
     /// </summary>
     [RequireComponent(typeof(LevelGenerator))]
     public class NetworkLevelSync : NetworkBehaviour

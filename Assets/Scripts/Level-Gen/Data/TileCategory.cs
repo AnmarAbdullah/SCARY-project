@@ -6,10 +6,9 @@ namespace ScaryGame.LevelGen
         Terrain,
         Road,
         Structure,
-        Spawn,
-        Objective,
         MonsterBase,
         PowerCore,
+        BaseStation,
         Custom
     }
 }

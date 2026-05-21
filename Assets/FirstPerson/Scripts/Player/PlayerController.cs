@@ -83,8 +83,8 @@ namespace TimeFracture.Player
 
         private void LateUpdate()
         {
-            if (!HasLocalControl) return;
-            
+            //if (!HasLocalControl) return;
+            // here
             // Freeze everything while reading a note
             if (cameraLook != null)
             {

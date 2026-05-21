@@ -4,11 +4,6 @@ using UnityEngine;
 
 namespace ScaryGame.LevelGen
 {
-    /// <summary>
-    /// Plain MonoBehaviour. Builds a map from a LevelConfig + seed.
-    /// For singleplayer/test: generates automatically in Start with a random seed.
-    /// For networking: pair with NetworkLevelSync, which calls GenerateFromSeed(seed) on every client.
-    /// </summary>
     public class LevelGenerator : MonoBehaviour
     {
         [Tooltip("The level recipe.")]
@@ -77,50 +72,76 @@ namespace ScaryGame.LevelGen
             };
             grid = ctx.grid;
 
-            // Phase 1: center tile (Monster Base).
+            // Phase 1: center tile (Enemy Base).
             if (config.centerTile != null)
             {
                 grid.Set(grid.Center, new TileInstance(config.centerTile, grid.Center));
             }
 
-            // Phase 2: required tiles (minCount > 0). Order: more constrained categories first.
+            // Phase 2: base station — always center-bottom.
+            BaseStationExit chosenExits = BaseStationExit.Forward;
+            if (config.baseStationVariants != null && config.baseStationVariants.Count > 0)
+            {
+                var variant = PickBaseStationVariant(config.baseStationVariants, ctx);
+                if (variant != null && variant.tile != null)
+                {
+                    int bsX = grid.width / 2;
+                    int bsY = config.baseStationBottomOffset;
+                    var bsCell = new Vector2Int(bsX, bsY);
+                    grid.Set(bsCell, new TileInstance(variant.tile, bsCell));
+                    chosenExits = variant.exits;
+                }
+            }
+
+            // Phase 3: required tiles (minCount > 0).
             var required = new List<TileDefinition>();
             foreach (var t in config.tiles)
             {
                 if (t == null || t == config.centerTile) continue;
                 if (t.minCount > 0) required.Add(t);
             }
-            // Stable order: PowerCore, Spawn, Objective, Custom, then everything else.
             required.Sort((a, b) => CategoryOrder(a.category).CompareTo(CategoryOrder(b.category)));
 
             foreach (var def in required)
             {
                 int placed = 0;
-                int attempts = 0;
-                while (placed < def.minCount && attempts < config.maxPlacementAttempts * def.minCount)
+                while (placed < def.minCount)
                 {
-                    attempts++;
-                    var cell = new Vector2Int(ctx.rng.Next(0, grid.width), ctx.rng.Next(0, grid.height));
-                    if (!grid.IsEmpty(cell)) continue;
-                    if (!RulesPass(cell, def, ctx)) continue;
-                    grid.Set(cell, new TileInstance(def, cell));
+                    var candidates = new List<Vector2Int>();
+                    foreach (var cell in ctx.grid.AllCells())
+                    {
+                        if (!ctx.grid.IsEmpty(cell)) continue;
+                        if (!RulesPass(cell, def, ctx)) continue;
+                        candidates.Add(cell);
+                    }
+                    if (candidates.Count == 0)
+                    {
+                        Debug.LogWarning($"[LevelGenerator] Could not place required tile '{def.name}' ({placed}/{def.minCount}). No valid cells remain.");
+                        return false;
+                    }
+                    // Shuffle candidates so placement is truly random across all valid spots.
+                    for (int i = candidates.Count - 1; i > 0; i--)
+                    {
+                        int j = ctx.rng.Next(i + 1);
+                        var tmp = candidates[i];
+                        candidates[i] = candidates[j];
+                        candidates[j] = tmp;
+                    }
+                    var pick = candidates[0];
+                    ctx.grid.Set(pick, new TileInstance(def, pick));
                     placed++;
-                }
-                if (placed < def.minCount)
-                {
-                    Debug.LogWarning($"[LevelGenerator] Could not place required tile '{def.name}' ({placed}/{def.minCount}).");
-                    return false;
+                    Debug.Log($"[LevelGenerator] Placed '{def.name}' #{placed} at {pick} (had {candidates.Count} valid cells)");
                 }
             }
 
-            // Phase 3: roads.
+            // Phase 4: roads from base station to power cores.
             if (config.carveRoads && config.roadTileSet != null && config.roadTileSet.straight != null)
             {
-                CarveRoads(ctx);
+                CarveBaseStationRoutes(ctx, chosenExits);
                 ResolveRoadShapes(ctx);
             }
 
-            // Phase 4: terrain fill on remaining empty cells.
+            // Phase 5: terrain fill on remaining empty cells.
             FillTerrain(ctx);
 
             return true;
@@ -130,11 +151,10 @@ namespace ScaryGame.LevelGen
         {
             switch (c)
             {
-                case TileCategory.PowerCore: return 0;
-                case TileCategory.Spawn: return 1;
-                case TileCategory.Objective: return 2;
-                case TileCategory.Structure: return 3;
-                case TileCategory.Custom: return 4;
+                case TileCategory.BaseStation: return 0;
+                case TileCategory.PowerCore: return 1;
+                case TileCategory.Structure: return 2;
+                case TileCategory.Custom: return 3;
                 default: return 9;
             }
         }
@@ -151,107 +171,153 @@ namespace ScaryGame.LevelGen
             return true;
         }
 
-        // Build the list of endpoint pairs to connect based on the LevelConfig toggles,
-        // then carve a winding path between each pair.
-        void CarveRoads(GenerationContext ctx)
+        // ------------------------------------------------------------------
+        // Road routing: base station exits → power cores
+        // ------------------------------------------------------------------
+
+        void CarveBaseStationRoutes(GenerationContext ctx, BaseStationExit exits)
         {
-            var spawns = new List<Vector2Int>();
-            var cores = new List<Vector2Int>();
-            var objectives = new List<Vector2Int>();
-            foreach (var c in ctx.grid.CellsByCategory(TileCategory.Spawn)) spawns.Add(c);
-            foreach (var c in ctx.grid.CellsByCategory(TileCategory.PowerCore)) cores.Add(c);
-            foreach (var c in ctx.grid.CellsByCategory(TileCategory.Objective)) objectives.Add(c);
-
-            var pairs = new HashSet<(Vector2Int, Vector2Int)>();
-
-            if (ctx.config.connectSpawnsToCores)
-                foreach (var s in spawns) foreach (var c in cores) AddPair(pairs, s, c);
-            if (ctx.config.connectSpawnsToObjectives)
-                foreach (var s in spawns) foreach (var o in objectives) AddPair(pairs, s, o);
-            if (ctx.config.connectCoresToObjectives)
-                foreach (var c in cores) foreach (var o in objectives) AddPair(pairs, c, o);
-            if (ctx.config.connectCoresToCores)
-                for (int i = 0; i < cores.Count; i++)
-                    for (int j = i + 1; j < cores.Count; j++)
-                        AddPair(pairs, cores[i], cores[j]);
-            if (ctx.config.connectObjectivesToObjectives)
-                for (int i = 0; i < objectives.Count; i++)
-                    for (int j = i + 1; j < objectives.Count; j++)
-                        AddPair(pairs, objectives[i], objectives[j]);
-
-            var allEndpoints = new List<Vector2Int>();
-            allEndpoints.AddRange(spawns);
-            allEndpoints.AddRange(cores);
-            allEndpoints.AddRange(objectives);
-            for (int i = 0; i < ctx.config.extraRandomConnections && allEndpoints.Count >= 2; i++)
+            var bsCells = new List<Vector2Int>();
+            foreach (var c in ctx.grid.CellsByCategory(TileCategory.BaseStation)) bsCells.Add(c);
+            if (bsCells.Count == 0)
             {
-                int a = ctx.rng.Next(allEndpoints.Count);
-                int b = ctx.rng.Next(allEndpoints.Count);
-                if (a != b) AddPair(pairs, allEndpoints[a], allEndpoints[b]);
+                Debug.LogWarning("[LevelGenerator] No BaseStation tile found on grid. Make sure the TileDefinition used in baseStationVariants has category = BaseStation.");
+                return;
             }
+            var bs = bsCells[0];
 
-            // Sort for deterministic order so the same seed produces the same network across runs.
-            var orderedPairs = new List<(Vector2Int, Vector2Int)>(pairs);
-            orderedPairs.Sort((p, q) =>
+            var cores = new List<Vector2Int>();
+            foreach (var c in ctx.grid.CellsByCategory(TileCategory.PowerCore)) cores.Add(c);
+            if (cores.Count == 0)
             {
-                int cmp = p.Item1.x.CompareTo(q.Item1.x); if (cmp != 0) return cmp;
-                cmp = p.Item1.y.CompareTo(q.Item1.y); if (cmp != 0) return cmp;
-                cmp = p.Item2.x.CompareTo(q.Item2.x); if (cmp != 0) return cmp;
-                return p.Item2.y.CompareTo(q.Item2.y);
+                Debug.LogWarning("[LevelGenerator] No PowerCore tiles found on grid. Roads need cores to connect to.");
+                return;
+            }
+            Debug.Log($"[LevelGenerator] Routing roads: BaseStation at {bs}, exits={exits}, {cores.Count} cores found.");
+
+            bool hasForward = exits == BaseStationExit.Forward
+                           || exits == BaseStationExit.ForwardLeft
+                           || exits == BaseStationExit.ForwardRight
+                           || exits == BaseStationExit.ForwardLeftRight;
+            bool hasLeft    = exits == BaseStationExit.Left
+                           || exits == BaseStationExit.ForwardLeft
+                           || exits == BaseStationExit.LeftRight
+                           || exits == BaseStationExit.ForwardLeftRight;
+            bool hasRight   = exits == BaseStationExit.Right
+                           || exits == BaseStationExit.ForwardRight
+                           || exits == BaseStationExit.LeftRight
+                           || exits == BaseStationExit.ForwardLeftRight;
+
+            var exitPoints = new List<Vector2Int>();
+            if (hasForward && ctx.grid.InBounds(bs + new Vector2Int(0, 1)))
+                exitPoints.Add(bs + new Vector2Int(0, 1));
+            if (hasLeft && ctx.grid.InBounds(bs + new Vector2Int(-1, 0)))
+                exitPoints.Add(bs + new Vector2Int(-1, 0));
+            if (hasRight && ctx.grid.InBounds(bs + new Vector2Int(1, 0)))
+                exitPoints.Add(bs + new Vector2Int(1, 0));
+
+            if (exitPoints.Count == 0) return;
+
+            cores.Sort((a, b) =>
+            {
+                float angleA = Mathf.Atan2(a.x - bs.x, a.y - bs.y);
+                float angleB = Mathf.Atan2(b.x - bs.x, b.y - bs.y);
+                return angleA.CompareTo(angleB);
             });
 
-            // For each candidate pair: if it's already reachable through existing roads, the
-            // 'roadBranchiness' setting decides whether to carve it anyway (creating a loop branch)
-            // or skip it (keeping the network tree-like).
-            float branchiness = Mathf.Clamp01(ctx.config.roadBranchiness);
-            foreach (var pair in orderedPairs)
+            var exitAssignments = new List<List<Vector2Int>>();
+            for (int i = 0; i < exitPoints.Count; i++)
+                exitAssignments.Add(new List<Vector2Int>());
+
+            if (exitPoints.Count >= cores.Count)
             {
-                if (AlreadyConnected(pair.Item1, pair.Item2, ctx))
+                for (int i = 0; i < cores.Count; i++)
+                    exitAssignments[i].Add(cores[i]);
+            }
+            else
+            {
+                var assigned = new bool[cores.Count];
+
+                for (int e = 0; e < exitPoints.Count; e++)
                 {
-                    // Already connected — only carve if random roll says yes.
-                    if (ctx.rng.NextDouble() > branchiness) continue;
+                    int bestCore = -1;
+                    float bestDist = float.MaxValue;
+                    for (int c = 0; c < cores.Count; c++)
+                    {
+                        if (assigned[c]) continue;
+                        float dist = Vector2Int.Distance(exitPoints[e], cores[c]);
+                        if (dist < bestDist) { bestDist = dist; bestCore = c; }
+                    }
+                    if (bestCore >= 0)
+                    {
+                        exitAssignments[e].Add(cores[bestCore]);
+                        assigned[bestCore] = true;
+                    }
                 }
-                PaintPath(pair.Item1, pair.Item2, ctx);
+
+                for (int c = 0; c < cores.Count; c++)
+                {
+                    if (assigned[c]) continue;
+                    int bestExit = 0;
+                    float bestDist = float.MaxValue;
+                    for (int e = 0; e < exitPoints.Count; e++)
+                    {
+                        float dist = Vector2Int.Distance(exitPoints[e], cores[c]);
+                        if (dist < bestDist) { bestDist = dist; bestExit = e; }
+                    }
+                    exitAssignments[bestExit].Add(cores[c]);
+                }
+            }
+
+            float forkChance = Mathf.Clamp01(ctx.config.branchForkChance);
+            for (int e = 0; e < exitPoints.Count; e++)
+            {
+                var exitPt = exitPoints[e];
+                var assignedCores = exitAssignments[e];
+                if (assignedCores.Count == 0) continue;
+
+                if (ctx.grid.IsEmpty(exitPt))
+                    ctx.grid.Set(exitPt, new TileInstance(ctx.config.roadTileSet.straight, exitPt));
+
+                if (assignedCores.Count == 1)
+                {
+                    PaintPath(exitPt, assignedCores[0], ctx);
+                }
+                else
+                {
+                    bool doFork = ctx.rng.NextDouble() < forkChance;
+                    if (doFork)
+                    {
+                        Vector2 mid = Vector2.zero;
+                        foreach (var core in assignedCores) mid += (Vector2)core;
+                        mid /= assignedCores.Count;
+                        Vector2 forkPos = Vector2.Lerp(exitPt, mid, 0.4f + (float)ctx.rng.NextDouble() * 0.2f);
+                        var forkCell = new Vector2Int(
+                            Mathf.Clamp(Mathf.RoundToInt(forkPos.x), 1, ctx.grid.width - 2),
+                            Mathf.Clamp(Mathf.RoundToInt(forkPos.y), 1, ctx.grid.height - 2)
+                        );
+
+                        PaintPath(exitPt, forkCell, ctx);
+                        foreach (var core in assignedCores)
+                            PaintPath(forkCell, core, ctx);
+                    }
+                    else
+                    {
+                        var prev = exitPt;
+                        foreach (var core in assignedCores)
+                        {
+                            PaintPath(prev, core, ctx);
+                            prev = core;
+                        }
+                    }
+                }
             }
         }
 
-        // BFS through road cells (and gameplay endpoints) to test if A reaches B.
-        bool AlreadyConnected(Vector2Int a, Vector2Int b, GenerationContext ctx)
-        {
-            if (a == b) return true;
-            var visited = new HashSet<Vector2Int> { a };
-            var queue = new Queue<Vector2Int>();
-            queue.Enqueue(a);
-            var dirs = new Vector2Int[]
-            {
-                new Vector2Int(0,  1), new Vector2Int(1, 0),
-                new Vector2Int(0, -1), new Vector2Int(-1, 0)
-            };
-            while (queue.Count > 0)
-            {
-                var cur = queue.Dequeue();
-                foreach (var d in dirs)
-                {
-                    var next = cur + d;
-                    if (visited.Contains(next)) continue;
-                    if (next == b) return true;
-                    if (!IsRoadConnection(next, ctx)) continue;
-                    visited.Add(next);
-                    queue.Enqueue(next);
-                }
-            }
-            return false;
-        }
+        // ------------------------------------------------------------------
+        // Path painting
+        // ------------------------------------------------------------------
 
-        static void AddPair(HashSet<(Vector2Int, Vector2Int)> set, Vector2Int a, Vector2Int b)
-        {
-            if (a == b) return;
-            // Canonical order so (a,b) and (b,a) are the same pair.
-            if (a.x < b.x || (a.x == b.x && a.y < b.y)) set.Add((a, b));
-            else set.Add((b, a));
-        }
-
-        // Routes from -> to via 1-2 random perpendicular waypoints. Higher windiness = more dramatic detours.
         void PaintPath(Vector2Int from, Vector2Int to, GenerationContext ctx)
         {
             var waypoints = new List<Vector2Int> { from };
@@ -288,7 +354,6 @@ namespace ScaryGame.LevelGen
             }
         }
 
-        // Greedy path with axis preference + obstacle avoidance.
         void WalkSegment(Vector2Int from, Vector2Int to, GenerationContext ctx)
         {
             var cur = from;
@@ -313,7 +378,6 @@ namespace ScaryGame.LevelGen
 
                 if (ctx.grid.IsEmpty(next))
                 {
-                    // Placeholder shape; ResolveRoadShapes swaps it for the right one later.
                     ctx.grid.Set(next, new TileInstance(ctx.config.roadTileSet.straight, next));
                 }
                 cur = next;
@@ -333,12 +397,13 @@ namespace ScaryGame.LevelGen
                 foreach (var avoidCat in ctx.config.roadAvoidCategories)
                     if (cat == avoidCat) return false;
             }
-            // Other placed tiles (PowerCore, Spawn, Objective, Custom) — don't overwrite, stop here.
             return false;
         }
 
-        // After paths are carved, walk every road cell and pick the right shape + rotation
-        // based on which of its 4 cardinal neighbors are roads or road-connected structures.
+        // ------------------------------------------------------------------
+        // Road shape resolution
+        // ------------------------------------------------------------------
+
         void ResolveRoadShapes(GenerationContext ctx)
         {
             var roadCells = new List<Vector2Int>();
@@ -360,8 +425,6 @@ namespace ScaryGame.LevelGen
             }
         }
 
-        // A cell counts as a road "neighbor" for shape-picking if it's another road or any
-        // gameplay endpoint the road plugs into (Spawn, PowerCore, Objective).
         static bool IsRoadConnection(Vector2Int cell, GenerationContext ctx)
         {
             if (!ctx.grid.InBounds(cell)) return false;
@@ -369,10 +432,13 @@ namespace ScaryGame.LevelGen
             if (t == null || t.definition == null) return false;
             var cat = t.definition.category;
             return cat == TileCategory.Road
-                || cat == TileCategory.Spawn
                 || cat == TileCategory.PowerCore
-                || cat == TileCategory.Objective;
+                || cat == TileCategory.BaseStation;
         }
+
+        // ------------------------------------------------------------------
+        // Terrain fill
+        // ------------------------------------------------------------------
 
         void FillTerrain(GenerationContext ctx)
         {
@@ -387,8 +453,6 @@ namespace ScaryGame.LevelGen
                 totalWeight += t.weight;
             }
 
-            // Resolve a guaranteed fallback so no cell is ever left empty.
-            // Order: explicit fallbackTerrain > first Terrain tile in pool > first tile in config with a prefab.
             var fallback = ctx.config.fallbackTerrain;
             if (fallback == null && pool.Count > 0) fallback = pool[0];
             if (fallback == null)
@@ -412,7 +476,6 @@ namespace ScaryGame.LevelGen
                 ctx.grid.Set(cell, new TileInstance(def, cell));
             }
 
-            // Final guarantee pass — anything still empty gets the fallback (or a clear warning).
             int stillEmpty = 0;
             foreach (var cell in ctx.grid.AllCells())
             {
@@ -422,8 +485,31 @@ namespace ScaryGame.LevelGen
             }
             if (stillEmpty > 0)
             {
-                Debug.LogWarning($"[LevelGenerator] {stillEmpty} cells left empty — no usable terrain or fallback. Add a Terrain-category tile to LevelConfig.tiles or set fallbackTerrain.");
+                Debug.LogWarning($"[LevelGenerator] {stillEmpty} cells left empty — no usable terrain or fallback.");
             }
+        }
+
+        // ------------------------------------------------------------------
+        // Helpers
+        // ------------------------------------------------------------------
+
+        static BaseStationVariant PickBaseStationVariant(List<BaseStationVariant> variants, GenerationContext ctx)
+        {
+            float totalWeight = 0f;
+            foreach (var v in variants)
+            {
+                if (v != null && v.tile != null) totalWeight += v.weight;
+            }
+            if (totalWeight <= 0f) return variants.Count > 0 ? variants[0] : null;
+            float pick = (float)(ctx.rng.NextDouble() * totalWeight);
+            float acc = 0f;
+            foreach (var v in variants)
+            {
+                if (v == null || v.tile == null) continue;
+                acc += v.weight;
+                if (pick <= acc) return v;
+            }
+            return variants[variants.Count - 1];
         }
 
         static TileDefinition PickWeighted(List<TileDefinition> pool, float total, GenerationContext ctx)
@@ -461,7 +547,7 @@ namespace ScaryGame.LevelGen
                 var tile = grid.Get(cell);
                 if (tile == null || tile.definition == null || tile.definition.prefab == null) continue;
 
-                var pos = new Vector3((cell.x - halfW) * ts, 0f, (cell.y - halfH) * ts);
+                var pos = new Vector3((cell.x - halfW) * ts, config.tileYOffset, (cell.y - halfH) * ts);
                 Quaternion rot = Quaternion.identity;
                 if (tile.useRotationOverride)
                 {
