@@ -14,7 +14,7 @@
 # Unity files
 *.asmdef unity-yaml-file -linguist-generated
 *.anim unity-yaml-file
-*.asset unity-yaml-file
+*.asset filter=lfs diff=lfs merge=lfs -text
 *.brush unity-yaml-file
 *.controller unity-yaml-file
 *.flare unity-yaml-file
@@ -29,7 +29,7 @@
 *.physicMaterial unity-yaml-file
 *.physicsMaterial2D unity-yaml-file
 *.playable unity-yaml-file
-*.prefab unity-yaml-file
+*.prefab filter=lfs diff=lfs merge=lfs -text
 *.preset unity-yaml-file
 *.renderTexture unity-yaml-file
 *.shadervariants unity-yaml-file
