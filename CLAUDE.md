@@ -19,7 +19,9 @@ A Slender-inspired **multiplayer horror game** (4 players max) built in Unity. P
 | Voice Transport | MirrorIgnorance (Dissonance + Mirror bridge, in Assets/Dissonance/Integrations/) |
 | NavMesh | Unity AI Navigation 1.1.7 |
 | Rendering | High Definition Render Pipeline |
-| Steam | **NOT YET INTEGRATED** - Steamworks SDK not present |
+| Steam | **NOT YET INTEGRATED** - See [STEAM_CLOUD.md](STEAM_CLOUD.md) for integration plan |
+| Steam Cloud | **PLANNED** - Settings, 3 save slots, progress tracking |
+| Steam Networking | **PLANNED** - Will replace Mirror KCP with Steam P2P transport |
 
 ## Game Loop (Design Intent)
 
@@ -101,9 +103,9 @@ Assets/
 
 ### Critical for Ship
 - **Main Menu UI** -- no menu scene, no play/settings/quit buttons
-- **Settings Menu** -- no audio/video/controls settings screen
+- **Settings Menu** -- no audio/video/controls settings screen (settings system exists; needs UI wiring + Cloud sync)
 - **Session/Lobby System** -- no way to find games, invite players, or start a match
-- **Steam SDK Integration** -- Steamworks not installed, no Steam auth, no Steam lobby/matchmaking
+- **Steam SDK Integration** -- Steamworks not installed, no Steam auth, no Steam lobby/matchmaking (see [STEAM_CLOUD.md](STEAM_CLOUD.md))
 - **Win/Lose Conditions** -- no game-over trigger, no extraction mechanic, no victory screen
 - **Power Core Interaction** -- cores exist as tiles but no pickup/deliver mechanic linking them to the Base Station
 - **Enemy AI Behavior** -- PatrolState has no movement (just a timer), ChaseState has a hardcoded target reference, no player detection/awareness system

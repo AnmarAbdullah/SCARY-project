@@ -14,6 +14,8 @@ public class FPSController : NetworkBehaviour
     public float mouseSensitivity = 2f;
     public float maxLookAngle = 85f;
     public Transform cameraHolder;
+    public Camera playerCamera;
+    public float defaultFOV = 60f;
 
     private CharacterController _cc;
     private Camera[] _cameras;
@@ -38,6 +40,20 @@ public class FPSController : NetworkBehaviour
         SetLocalCameraState(true);
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        ApplyCurrentSettings();
+    }
+
+    private void ApplyCurrentSettings()
+    {
+        var manager = SCARY.UI.Settings.SettingsManager.Instance;
+        if (manager == null) return;
+
+        var data = manager.GetSettingsData();
+        if (data == null) return;
+
+        SetMouseSensitivity(data.gameplay.mouseSensitivity);
+        SetFOV(data.gameplay.fov);
     }
 
     public override void OnStopLocalPlayer()
@@ -92,5 +108,18 @@ public class FPSController : NetworkBehaviour
 
         foreach (AudioListener listener in _audioListeners)
             listener.enabled = active;
+    }
+
+    public void SetMouseSensitivity(float sensitivity)
+    {
+        mouseSensitivity = Mathf.Max(0.1f, sensitivity);
+    }
+
+    public void SetFOV(float fov)
+    {
+        if (playerCamera != null)
+        {
+            playerCamera.fieldOfView = Mathf.Clamp(fov, 40f, 110f);
+        }
     }
 }

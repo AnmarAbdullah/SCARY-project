@@ -35,8 +35,13 @@ What remains before shipping to Steam, roughly ordered by priority and dependenc
 - [ ] Host presses "Start" -> seed rolls -> level generates -> players teleport to spawn
 - [ ] Player ready-up (optional but nice)
 
-### Steam SDK
+### Steam SDK & Cloud
+See [STEAM_CLOUD.md](STEAM_CLOUD.md) for detailed architecture and checklist.
 - [ ] Add Steamworks.NET (or Facepunch.Steamworks) to the project
+- [ ] Create `SteamCloudManager.cs` singleton for all cloud I/O
+- [ ] **Steam Cloud Settings**: Wire `SettingsManager` to save/load settings via cloud (JSON)
+- [ ] **Steam Cloud Save Slots**: Implement 3 save slots for game progress (JSON)
+- [ ] **Steam Cloud Stats**: Auto-increment lifetime stats (games played, won, cores collected)
 - [ ] Replace Mirror's default transport with SteamTransport (Steam P2P networking)
 - [ ] Steam authentication (initialize Steam API on launch)
 - [ ] Steam lobby creation and browsing
