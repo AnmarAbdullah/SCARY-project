@@ -83,3 +83,7 @@ crashlytics-build.properties
 /SerializedBuildInfo
 
 /Assets/Plugins/Sirenix/Demos/
+
+# Steam dev-only AppID file. Must NOT be in shipped builds —
+# Steam supplies the real App ID at launch when the game is run via Steam.
+/steam_appid.txt

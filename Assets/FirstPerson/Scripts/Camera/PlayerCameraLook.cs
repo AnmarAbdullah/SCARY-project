@@ -70,8 +70,6 @@ namespace TimeFracture.Camera
                 _yaw = playerBody.eulerAngles.y;
         }
 
-        private void Update() { }
-
         public void Look(Vector2 input)
         {
             if (playerBody == null || cameraHolder == null) return;

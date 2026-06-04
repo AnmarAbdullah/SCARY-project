@@ -79,34 +79,31 @@ Each ~10-50KB (TBD after gameplay implementation)
   "sessionId": "uuid-here",
   "timestamp": 1609459200,
   "playerName": "PlayerOne",
-  "levelSeed": 12345,
-  "progress": {
-    "coresCollected": 2,
-    "totalCoresCollected": 42,
-    "gamesWon": 5,
-    "gamesPlayed": 12
+  "campaign": {
+    "levelReached": 2,
+    "levelsCompleted": [1],
+    "audioLogsFound": ["lvl1_creator_01"]
   },
-  "currentGameState": {
-    "inventory": [],
-    "health": 100,
-    "position": [0, 0, 0]
+  "progress": {
+    "campaignsCompleted": 1,
+    "gamesPlayed": 12
   }
 }
 ```
 
 **TBD**: 
 - What goes into current vs. lifetime progress?
-- Is position/inventory persisted mid-game?
+- Do players resume mid-campaign at the last completed level, or is each playthrough a single run?
 - Per-session or persistent tracking?
 
 ### 3. Progress Tracking
 
 **Lifetime Stats** (automatically synced):
 - Total games played
-- Total games won
-- Total cores collected
+- Campaigns completed (all 7 levels)
+- Highest level reached
+- Audio logs / recordings found
 - Play time (hours)
-- Most common difficulty/map seed
 
 **Implementation**: Incremental updates to a `Stats.json` file when milestones are reached (game end, core collected, etc.).
 
@@ -162,18 +159,19 @@ Each ~10-50KB (TBD after gameplay implementation)
 
 ## Integration Points (As Features Are Built)
 
-### When Building Win/Loss System
-- Add `OnGameEnd(bool won, SaveData data)` → call `SteamCloudManager.SaveToSlot()` + increment stats
+### When Building Level Progression / Win-Loss System
+- On completing a level → update `levelReached` / `levelsCompleted` in the active slot
+- On campaign complete (Level 7) → `OnGameEnd(bool won, SaveData data)` → `SteamCloudManager.SaveToSlot()` + increment stats
 
 ### When Building Main Menu
 - Add "Load Game" button → call `SteamCloudManager.LoadSaveSlot(slotIndex)`
 - Add "Settings" button → already wired to SettingsManager
 
-### When Networking Enemy to Server
-- Include enemy position + difficulty in SaveData if mid-game save is needed
+### When Building the Ghost AI
+- Difficulty profile (per-level scaling / hardcore) can be recorded in SaveData if relevant to progress
 
 ### When Adding Lobby/Session System
-- Store session seed in SaveData for replay value
+- Store which level the party is on for resume support
 - Consider storing player steam IDs for stats attribution
 
 ## Dependencies

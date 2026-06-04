@@ -2,109 +2,110 @@
 
 What remains before shipping to Steam, roughly ordered by priority and dependency.
 
+> **Design direction (June 2026):** Linear, hand-built **7-level story campaign**. Procedural generation is **CANCELLED** — there are no seeds, random maps, or power-core collection. See [CLAUDE.md](CLAUDE.md) and [CurrentLevels.md](CurrentLevels.md).
+
 ## Phase 1: Core Gameplay Loop (Must Have)
 
-### Enemy AI - Make It Scary
-- [ ] Wire `TheWalker_final.fbx` model to the enemy prefab (currently not attached)
-- [ ] Add NavMeshAgent to enemy, bake NavMesh at runtime after level generation (use `NavMeshSurface.BuildNavMesh()`)
-- [ ] Implement real PatrolState: pick random NavMesh points within radius, walk to them
-- [ ] Implement player detection in ChaseState: find nearest player via overlap sphere or line-of-sight raycast, replace hardcoded `target` reference
-- [ ] Add kill mechanic: on collision/proximity with player -> player dies
-- [ ] Network the enemy: server controls AI, NetworkTransform syncs position to clients
-- [ ] Add animations (idle, walk, run, attack) -- needs animator controller and clips from the 3D artist
+### Ghost AI - Make It Scary
+Behavior is already specified (and is **unchanged** by the design pivot) — see [AI-System.md](AI-System.md). Remaining build work:
+- [ ] Wire `TheWalker_final.fbx` model to the ghost prefab + animator (idle, walk, run, jumpscare) — needs clips from the 3D artist
+- [ ] Build the `NoiseEventBus` → `GhostPerception` → `GhostBrain` → `GhostMover` pipeline
+- [ ] Spawn the ghost at **designer-placed spawn points** per level (no longer computed from a grid center)
+- [ ] Use **NavMesh baked in-editor per hand-built level** (no runtime bake needed anymore)
+- [ ] Implement states: Idle, Investigate Noise, Roam, Chase, Search-Last-Known, Jumpscare, (Laser ability)
+- [ ] Down/kill mechanic: on jumpscare contact → player downed (server-authoritative)
+- [ ] Network the ghost: server controls AI, NetworkTransform/NetworkAnimator sync to clients
 
-### Power Core Collection & Extraction
-- [ ] Create a `PowerCore` item/interactable that players can pick up (reuse or extend the existing Item system)
-- [ ] Track collected cores per-team (server-authoritative counter via SyncVar)
-- [ ] Base Station becomes the extraction point: when all 3 cores delivered, trigger win
-- [ ] UI: show core count (e.g., "2/3 Cores Collected")
+### Level Loading & Progression
+- [ ] Level manager: load Level N scene, spawn players, advance to N+1 when the gate opens
+- [ ] Objective-complete detection per level → unlock gate/door
+- [ ] Require players to regroup at the gate to advance
+- [ ] Campaign-complete flow after Level 7 → ending → return to menu
+
+### Level Objective Mechanics
+- [ ] **Level 1 (Forest):** 3 signal towers with relay redirect (100%→0%, relay fights back), direction monitor visual, cabin with audio log + fuse(s), gate opens when all towers done
+- [ ] **Level 2 (Cabin):** restore power via lever (floor wire guides players), cabin lights + contains audio log/map/note, 4 relays each with named levers (Amplify/Ground/Suppress/Stabilize) pulled in correct order by all 4 players, wrong input makes noise, door/hatch opens on success
+- [ ] **Levels 3–7:** **design pending**, then build
+
+### Narrative Systems
+- [ ] **Speaker Lady** dialogue system: triggered voice guidance per objective/level
+- [ ] **Audio recording** pickups: interactable objects that play a one-time story log (Creator's logs, etc.)
 
 ### Death & Game Over
-- [ ] Player health system (or instant-kill on enemy contact)
-- [ ] Death state: ragdoll or fade to black, spectate other players
-- [ ] Game over when all players dead
-- [ ] Win screen when cores extracted
+- [ ] Player downed state (input disabled, screen tint) + revive/help (TBD)
+- [ ] Level-fail condition + handling (retry level vs. restart — TBD, see memory `level_progression`)
+- [ ] Win/ending screen after Level 7
 - [ ] Return to lobby/menu after game ends
 
 ## Phase 2: Multiplayer Infrastructure
 
-### Session System
-- [ ] Decide: Steam lobbies vs. direct IP connect vs. relay
-- [ ] Build a simple "Create Game" / "Join Game" flow
-- [ ] In-game waiting area before level generates (players load into a holding zone)
-- [ ] Host presses "Start" -> seed rolls -> level generates -> players teleport to spawn
-- [ ] Player ready-up (optional but nice)
+### Lobby / Session System
+- [ ] Lobby flow: host creates, players join until up to **4**, host starts the game
+- [ ] Player list / ready-up
+- [ ] On start → load Level 1 scene → spawn all players
+- [ ] Decide transport: Steam lobbies vs. direct IP vs. relay
 
 ### Steam SDK & Cloud
 See [STEAM_CLOUD.md](STEAM_CLOUD.md) for detailed architecture and checklist.
 - [ ] Add Steamworks.NET (or Facepunch.Steamworks) to the project
 - [ ] Create `SteamCloudManager.cs` singleton for all cloud I/O
-- [ ] **Steam Cloud Settings**: Wire `SettingsManager` to save/load settings via cloud (JSON)
-- [ ] **Steam Cloud Save Slots**: Implement 3 save slots for game progress (JSON)
-- [ ] **Steam Cloud Stats**: Auto-increment lifetime stats (games played, won, cores collected)
-- [ ] Replace Mirror's default transport with SteamTransport (Steam P2P networking)
-- [ ] Steam authentication (initialize Steam API on launch)
-- [ ] Steam lobby creation and browsing
-- [ ] Steam invite system (invite friends from Steam overlay)
-- [ ] Steam app ID registration (requires a Steamworks developer account + $100 fee)
+- [ ] **Steam Cloud Settings**: wire `SettingsManager` to save/load via cloud (JSON)
+- [ ] **Steam Cloud Save Slots**: 3 slots storing campaign progress (which level reached)
+- [ ] **Steam Cloud Stats**: lifetime stats (games played, campaigns completed, play time)
+- [ ] Replace Mirror's default transport with SteamTransport (Steam P2P)
+- [ ] Steam authentication, lobby creation/browsing, invite system
+- [ ] Steam app ID registration (Steamworks dev account + $100 fee)
 
 ### Proximity Voice Chat
-- [ ] Configure Dissonance for proximity: use spatial blend with distance rolloff
+- [ ] Configure Dissonance for proximity (spatial blend + distance rolloff)
 - [ ] Test with multiple players at varying distances
-- [ ] Consider push-to-talk vs. always-on (push-to-talk is simpler and less annoying)
 
 ## Phase 3: UI & Menus
 
 ### Main Menu
-- [ ] Menu scene with: Play, Settings, Quit
-- [ ] "Play" opens session browser or host/join options
-- [ ] Background ambiance (dark forest scene or animated background)
+- [ ] Menu scene: Play, Settings, Quit
+- [ ] "Play" → lobby (host/join)
+- [ ] Background ambiance
 
 ### Settings Menu
-- [ ] Audio: master volume, SFX, music, voice chat volume
-- [ ] Video: resolution, quality preset, fullscreen toggle, V-Sync
-- [ ] Controls: mouse sensitivity, key rebinding (stretch goal)
-- [ ] Save/load settings to PlayerPrefs or JSON file
+- [ ] Audio: master, SFX, music, voice chat volume
+- [ ] Video: resolution, quality preset, fullscreen, V-Sync
+- [ ] Controls: mouse sensitivity, FOV (key rebinding stretch goal)
+- [ ] Persist via Steam Cloud (see [STEAM_CLOUD.md](STEAM_CLOUD.md))
 
 ### In-Game HUD
-- [ ] Core count display
-- [ ] Proximity indicator or compass pointing to cores (optional)
-- [ ] Player status indicators (alive/dead)
+- [ ] Objective/progress display (per level)
+- [ ] Player status indicators (alive/downed)
+- [ ] Subtitles for Speaker Lady / audio recordings
 - [ ] Pause menu (resume, settings, disconnect)
 
 ## Phase 4: Polish & Content
 
 ### Player Visuals
-- [ ] 3rd-person player model (what other players see) -- from the 3D artist
-- [ ] Attach model to player prefab with proper animator
-- [ ] Sync animations over network (Mirror's NetworkAnimator)
+- [ ] 3rd-person player model — from the 3D artist
+- [ ] Attach model to player prefab with animator; sync via Mirror's NetworkAnimator
 
-### Level Gen Production Seeds
-- [ ] Add post-generation validation: ensure all cores are reachable, paths aren't too short/long
-- [ ] Curate a seed pool or improve the rule set so random seeds consistently produce good maps
-- [ ] Consider map size tuning (20x20 may need adjustment based on playtesting)
-
-### Audio & Atmosphere
-- [ ] Ambient forest sounds (wind, distant sounds, horror stingers)
-- [ ] Enemy audio (footsteps, growl/screech when chasing, ambient hum near monster base)
-- [ ] Music: tension track that ramps with proximity to enemy or core count
+### Level Content & Atmosphere
+- [ ] Build out art/props for each hand-built level
+- [ ] Ambient audio per level (wind, hums, horror stingers)
+- [ ] Ghost audio (footsteps, screech on chase)
+- [ ] Music: tension track that ramps with ghost proximity
 
 ### Items & Mechanics
-- [ ] Flashlight (probably the most important item -- dark forest + horror)
-- [ ] Sprint stamina (optional, adds tension)
+- [ ] Flashlight (likely the most important item)
+- [ ] Sprint stamina (optional)
 
 ## Phase 5: Steam Release
 
 - [ ] Steam store page (screenshots, description, trailer)
 - [ ] Steam build upload via SteamPipe
-- [ ] Achievements (optional but adds perceived value cheaply)
-- [ ] Cloud saves for settings (optional)
+- [ ] Achievements (optional, e.g. complete each level / the campaign)
 - [ ] Testing: 4-player sessions, edge cases (host disconnect, late join, etc.)
 - [ ] Launch!
 
 ## Design Principles
 
 - **Keep it simple.** Two devs. Ship fast. Cut scope ruthlessly.
-- **Minimum viable horror:** dark forest + scary robot + proximity audio + limited visibility. That's enough.
-- **Don't over-engineer.** If a system works, ship it. Optimize later if the game gets traction.
-- **Procedural gen is the replayability.** Different map each game = reason to replay.
+- **Minimum viable horror:** dark environments + scary robot ghost + proximity audio + limited visibility + tense co-op puzzles.
+- **Story/experience over replayability.** Hand-built levels and narrative are the draw — not a different map every game.
+- **Don't over-engineer.** If a system works, ship it.

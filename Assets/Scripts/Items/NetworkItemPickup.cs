@@ -1,11 +1,15 @@
 using Mirror;
 using UnityEngine;
+using ScaryGame.Game;
+using ScaryGame.Items;
+using ScaryGame.Noise;
 
 [RequireComponent(typeof(Item))]
 [RequireComponent(typeof(NetworkIdentity))]
 public class NetworkItemPickup : NetworkBehaviour
 {
     [SerializeField] private float serverPickupRange = 4f;
+    [SerializeField] private float coreNoiseHearRadius = 40f;
 
     [SyncVar(hook = nameof(OnPickedByChanged))]
     private NetworkIdentity _pickedBy;
@@ -25,6 +29,19 @@ public class NetworkItemPickup : NetworkBehaviour
         _pickedBy = pickerIdentity;
         ApplyPickedUp(pickerIdentity);
         RpcOnPickedUp(pickerIdentity);
+
+        if (TryGetComponent<CoreItemMarker>(out _))
+        {
+            NoiseEventBus.Emit(new NoiseEvent(
+                position: transform.position,
+                type: NoiseType.CorePickup,
+                intensity: 1f,
+                hearingRadius: coreNoiseHearRadius,
+                source: gameObject));
+
+            if (CoreGameState.Instance != null)
+                CoreGameState.Instance.NotifyCorePickedUp(netIdentity);
+        }
     }
 
     public override void OnStartClient()

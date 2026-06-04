@@ -62,10 +62,6 @@ namespace ScaryGame.LevelGen
         [Tooltip("Categories that road carving must route AROUND. MonsterBase is a sensible default.")]
         public List<TileCategory> roadAvoidCategories = new List<TileCategory> { TileCategory.MonsterBase };
 
-        [Header("Terrain Painting")]
-        [Tooltip("Shared paint settings used by all TerrainPainter cubes. Individual cubes can override with their own profile.")]
-        public TerrainPaintProfile terrainPaintProfile;
-
         [Header("Generation Limits")]
         [Tooltip("How many random cell picks to try when placing a required tile before giving up.")]
         public int maxPlacementAttempts = 200;

@@ -1,6 +1,7 @@
 using Dissonance;
 using Mirror;
 using UnityEngine;
+using ScaryGame.Players;
 using TimeFracture.Camera;
 using TimeFracture.Input;
 
@@ -15,11 +16,20 @@ namespace TimeFracture.Player
         public HeadBob headBob;
         public CameraIdleSway idleSway;
 
+        [Header("Downed (stub — full revive system later)")]
+        [SerializeField] private CanvasGroup downedOverlay;
+
+        [SyncVar(hook = nameof(OnDownedChanged))]
+        private bool _isDowned;
+        public bool IsDowned => _isDowned;
+
         private PlayerMovement _movement;
         private PlayerInputHandler _input;
         private UnityEngine.Camera[] _cameras;
         private AudioListener[] _audioListeners;
         private CameraFollow[] _cameraFollowers;
+
+        public PlayerMovement Movement => _movement;
 
         private bool HasLocalControl => isLocalPlayer || (!NetworkClient.active && !NetworkServer.active);
 
@@ -66,6 +76,47 @@ namespace TimeFracture.Player
         {
             SetLocalPlayerState(false);
             GetComponent<VoiceBroadcastTrigger>().enabled = isLocalPlayer;
+        }
+
+        public override void OnStartServer()
+        {
+            PlayerRegistry.Register(this);
+        }
+
+        public override void OnStopServer()
+        {
+            PlayerRegistry.Unregister(this);
+        }
+
+        [Server]
+        public void ServerDown()
+        {
+            if (_isDowned) return;
+            _isDowned = true;
+        }
+
+        [Server]
+        public void ServerRevive()
+        {
+            if (!_isDowned) return;
+            _isDowned = false;
+        }
+
+        private void OnDownedChanged(bool oldVal, bool newVal)
+        {
+            if (newVal && isLocalPlayer)
+            {
+                if (_input != null) _input.enabled = false;
+                if (_movement != null) _movement.enabled = false;
+            }
+            else if (!newVal && isLocalPlayer)
+            {
+                if (_input != null) _input.enabled = true;
+                if (_movement != null) _movement.enabled = true;
+            }
+
+            if (downedOverlay != null && isLocalPlayer)
+                downedOverlay.alpha = newVal ? 1f : 0f;
         }
 
         public override void OnStartLocalPlayer()

@@ -6,14 +6,16 @@
 - **Dissonance Voice Chat** (plugin in `Assets/Plugins/Dissonance/`) -- voice comms
 - **MirrorIgnorance** (in `Assets/Dissonance/Integrations/MirrorIgnorance/`) -- bridges Dissonance to Mirror's transport layer
 
+> **Note (June 2026):** Procedural generation is **CANCELLED**. Levels are hand-built scenes loaded by index, not generated from a synced seed. The old `NetworkLevelSync` seed-sync described in earlier versions of this doc is deprecated. See [CLAUDE.md](CLAUDE.md) and [LEVELGEN.md](LEVELGEN.md).
+
 ## How Networking is Used Today
 
-### Level Generation Sync
-`NetworkLevelSync` (`Assets/Scripts/Level-Gen/Core/NetworkLevelSync.cs`):
-- Server generates seed in `OnStartServer()`, stores in `[SyncVar] syncedSeed`
-- Clients receive seed via SyncVar hook `OnSeedChanged`, run `LevelGenerator.GenerateFromSeed(seed)`
-- Host skips client-side generation (already did it in `OnStartServer`)
-- Result: all clients have identical maps without transmitting tile data
+### Level Loading / Scene Sync
+Levels are authored scenes. The flow is standard Mirror scene management:
+- Host/server decides the active level and uses Mirror's networked scene change (`NetworkManager.ServerChangeScene`) to load the same level scene on all clients
+- Players are (re)spawned at the level's designer-placed spawn points after the scene loads
+- Progression: when a level's objective is complete and the gate opens, the server changes scene to the next level (Level N → N+1)
+- No seed/tile data is transmitted — everyone loads identical authored content
 
 ### Player Spawning
 Two player prefabs exist:
@@ -43,7 +45,7 @@ Both inherit `NetworkBehaviour`. On spawn:
 No lobby, matchmaking, or session management exists. Needs:
 - A way for players to create/join games (host starts a Mirror server, others connect)
 - Player list / ready-up before game start
-- **Planned approach**: players join directly into the game scene (a holding area). Host clicks "Start" -> level generates -> players teleport to spawn. No separate lobby scene.
+- **Planned approach**: players set up / join a lobby and wait until up to 4 players are connected. Host clicks "Start" -> server changes scene to **Level 1** -> players spawn at the level's spawn points. Progression advances scene-by-scene through Levels 1–7.
 
 ### Steam Integration
 Steamworks SDK is not in the project. Needs:
@@ -59,17 +61,17 @@ Dissonance supports spatial audio out of the box. To enable:
 - Configure `DissonanceComms` with spatial blend settings
 - The MirrorIgnorance transport already handles the networking side
 
-### Networked Enemy
-The enemy state machine (`Assets/Scripts/Enemy/`) is purely local right now:
-- `StateManager` runs on the enemy GameObject but has no `NetworkBehaviour`
-- For multiplayer: enemy logic should run on the server only, with position/state synced to clients via SyncVars or NetworkTransform
-- Kill detection needs to be server-authoritative
+### Networked Ghost
+The ghost AI (see [AI-System.md](AI-System.md)) runs **server-only**:
+- All perception, state machine, and movement decisions happen on the server
+- Position/animation synced to clients via `NetworkTransform` + `NetworkAnimator`
+- Down/kill detection (jumpscare contact) is server-authoritative
 
 ## Mirror Patterns Used
 
 | Pattern | Where |
 |---|---|
-| `[SyncVar(hook)]` | NetworkLevelSync (seed), NetworkItemPickup (pickedBy) |
+| `[SyncVar(hook)]` | NetworkItemPickup (pickedBy), objective/progression state |
 | `[Command]` | NetworkItemPickup.CmdPickup, PlayerItems.CmdSetActiveItem |
 | `[ClientRpc]` | NetworkItemPickup.RpcOnPickedUp, PlayerItems.RpcSetActiveItem |
 | `isLocalPlayer` checks | FPSController, PlayerController, PlayerItems |

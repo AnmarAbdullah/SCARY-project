@@ -1,4 +1,12 @@
-# Level Generation System
+# Level Generation System — DEPRECATED
+
+> ## ⚠️ This system is NO LONGER USED by the game
+>
+> As of **June 2026**, SCARY-project is a **linear, hand-built 7-level campaign**. Procedural generation is **CANCELLED**. This folder (`Assets/Scripts/Level-Gen/`, namespace `ScaryGame.LevelGen`) and the documentation below describe the **old** design and are being phased out of the codebase. **Do not build new features on this system, and do not treat the description below as the current game design.** See [CLAUDE.md](../../../CLAUDE.md), [LEVELGEN.md](../../../LEVELGEN.md), and [CurrentLevels.md](../../../CurrentLevels.md).
+>
+> The text below is retained only as historical reference for the legacy code still present in this folder.
+
+---
 
 Procedural level generator for the SCARY co-op horror game. Builds a tile-based map every match: forest, roads, structures, spawns, the Monster Base in the dead center, Power Cores, Objectives — all governed by designer-authored rules. Designed to be **designer-friendly** (everything's a ScriptableObject), **easy to extend** (add a new tile type or rule without touching the engine), and **multiplayer-safe** (one shared seed → identical maps on every client).
 

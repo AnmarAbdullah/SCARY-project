@@ -96,7 +96,9 @@ namespace TimeFracture.Player
         public void Move(Vector2 input, bool isSprinting)
         {
             if (!canWalk) { _moveDir = Vector3.zero; IsMoving = false; IsSprinting = false; return; }
-            IsSprinting = canSprint && isSprinting && !IsCrouching && input.magnitude > 0.1f;
+            // Sprint only when moving forward (forward, forward-right, or forward-left).
+            // Disallow pure strafing or backwards sprint.
+            IsSprinting = canSprint && isSprinting && !IsCrouching && input.y > 0.1f;
             IsMoving    = input.magnitude > 0.05f;
             float speed = IsCrouching ? crouchSpeed : IsSprinting ? sprintSpeed : walkSpeed;
             _moveDir    = (transform.forward * input.y + transform.right * input.x).normalized * speed;

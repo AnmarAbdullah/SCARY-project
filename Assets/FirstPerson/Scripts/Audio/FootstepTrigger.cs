@@ -1,4 +1,5 @@
 using UnityEngine;
+using ScaryGame.Noise;
 using TimeFracture.Interfaces;
 
 namespace TimeFracture.Audio
@@ -15,13 +16,15 @@ namespace TimeFracture.Audio
         public float crouchStepInterval = 3.0f;
 
         // ── Private ───────────────────────────────────────────────────────
-        private float        _distanceTravelled;
-        private Vector3      _lastPosition;
-        private IAudioPlayer _audioPlayer;
+        private float            _distanceTravelled;
+        private Vector3          _lastPosition;
+        private IAudioPlayer     _audioPlayer;
+        private PlayerNoiseRelay _noiseRelay;
 
         private void Awake()
         {
             _audioPlayer  = GetComponent<IAudioPlayer>();
+            _noiseRelay   = GetComponentInParent<PlayerNoiseRelay>();
             _lastPosition = transform.position;
         }
 
@@ -48,6 +51,7 @@ namespace TimeFracture.Audio
             {
                 _distanceTravelled = 0f;
                 _audioPlayer?.PlayFootstep(state);
+                _noiseRelay?.LocalReportFootstep(state);
             }
         }
 
