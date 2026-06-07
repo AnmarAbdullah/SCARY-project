@@ -168,7 +168,8 @@ Each ~10-50KB (TBD after gameplay implementation)
 - Add "Settings" button → already wired to SettingsManager
 
 ### When Building the Ghost AI
-- Difficulty profile (per-level scaling / hardcore) can be recorded in SaveData if relevant to progress
+- Difficulty profile (per-level ghost scaling) can be recorded in SaveData if relevant to progress
+- **Hardcore mode is never persisted.** It is a single continuous run with no save slot, resume, or checkpoint — do not write Hardcore state to SaveData (see [HardCore-Mode.md](HardCore-Mode.md) and [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md))
 
 ### When Adding Lobby/Session System
 - Store which level the party is on for resume support

@@ -65,7 +65,7 @@ public class FPSController : NetworkBehaviour
     void Update()
     {
         if (!isLocalPlayer) return;
-        
+
         HandleLook();
         HandleMovement();
     }

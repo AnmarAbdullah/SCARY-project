@@ -14,7 +14,7 @@
 
 ## Context
 
-The Ghost is the antagonist of SCARY (4-player co-op horror, Unity HDRP + Mirror + Dissonance). She hunts players as they solve each hand-built level's objective. Today the project has a `StateManager`/`State` skeleton at `Assets/Scripts/Enemy/` that does nothing — no movement, no detection, no noise handling. There is no player-downed state, no distractor item, and no proximity voice chat yet. This plan builds the Ghost end-to-end on top of those gaps, with heavy designer-facing tuning (ScriptableObjects), because difficulty, hardcore mode, and per-level scaling all need to be dialled later.
+The Ghost is the antagonist of SCARY (4-player co-op horror, Unity HDRP + Mirror + Dissonance). She hunts players as they solve each hand-built level's objective. Today the project has a `StateManager`/`State` skeleton at `Assets/Scripts/Enemy/` that does nothing — no movement, no detection, no noise handling. There is no player-downed state, no distractor item, and no proximity voice chat yet. This plan builds the Ghost end-to-end on top of those gaps, with heavy designer-facing tuning (ScriptableObjects), because difficulty and per-level scaling all need to be dialled later. (Hardcore mode is a full game mode in its own right — puzzle amounts, multi-round puzzles, environment toggles, save/wipe rules — designed in [HardCore-Mode.md](HardCore-Mode.md); the ghost's *only* contribution to it is selecting a more aggressive `GhostDifficultyProfile` for its scaling.)
 
 Core design idea: **everything the Ghost "hears" is a `NoiseEvent`** — footsteps, level-objective interactions, distractor devices, voice chat. One bus, one consumer (the Ghost's perception), many emitters. All Ghost AI runs server-only; clients see her via `NetworkTransform` and a `NetworkAnimator`.
 
@@ -80,7 +80,7 @@ Fields, all designer-editable:
 - **Laser ability** — `laserMinSecondsBetween`, `laserMaxSecondsBetween`, `laserActivationChance`, `laserFreezeDuration` (2s), `laserMaxAllowedSpeed`
 - **Always-roam toggle** — `idleRoamsMap` (future use; off by default)
 
-**New: `Assets/Scripts/Enemy/Ghost/Config/GhostDifficultyProfile.cs`** — overlays multipliers on `GhostConfig`. Used for hardcore mode + per-level scaling.
+**New: `Assets/Scripts/Enemy/Ghost/Config/GhostDifficultyProfile.cs`** — overlays multipliers on `GhostConfig`. Used for per-level ghost scaling, and to supply Hardcore mode's *ghost-aggression* scaling. (Hardcore mode itself — puzzle amounts, multi-round puzzles, environment toggles, save/wipe — is designed in [HardCore-Mode.md](HardCore-Mode.md); this SO covers only the ghost's slice of it.)
 - `float speedMultiplier`, `float hearingRadiusMultiplier`, `float visionRangeMultiplier`, `float laserFrequencyMultiplier`, `float losPatience` (how long before she gives up search)
 - `GhostBrain` reads `effectiveValue = config.x * profile.multiplier` at state Enter().
 
@@ -193,7 +193,7 @@ No runtime baker is needed anymore. Each hand-built level scene has a baked **Na
 - **NavMesh**: bake it in-editor per level (`NavMeshSurface`). Do not write a runtime baker.
 - **Mirror patterns**: follow `NetworkItemPickup` for `[Command]`/`[ClientRpc]`/`SyncVar` usage. Use `NetworkTransform` + `NetworkAnimator` rather than custom syncing.
 - **`PlayerController.isLocalPlayer`** patterns: already used for camera/voice toggles — same pattern for the footstep noise relay (only local player relays its own footstep, server validates and emits).
-- **Settings system**: `GhostConfig` and `GhostDifficultyProfile` are pure ScriptableObjects, not part of the existing `SettingsManager`. Hardcore mode toggle, when added, just swaps which `GhostDifficultyProfile` SO is active.
+- **Settings system**: `GhostConfig` and `GhostDifficultyProfile` are pure ScriptableObjects, not part of the existing `SettingsManager`. Hardcore mode is **not** just a difficulty-profile swap — it is a lobby-set `GameMode` flag driving puzzle amounts, multi-round puzzles, environment toggles, and save/wipe rules (see [HardCore-Mode.md](HardCore-Mode.md) and [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md)). The ghost's only role in Hardcore is selecting a more aggressive `GhostDifficultyProfile` for its scaling.
 
 ---
 
@@ -223,7 +223,7 @@ End-to-end test in a hand-built level scene (or a dev/test scene) with a baked `
 8. **NoiseDevice.** Drop the device prefab in scene, press the debug activate key → Ghost investigates at `chaseDeviceNoiseSpeed`.
 9. **Voice chat hearing.** With two clients in Host mode, hold push-to-talk on the remote — Ghost should treat your position as a noise source within `voiceChatHearRadius`. Independently tunable.
 10. **Laser ability.** Set `laserActivationChance = 1` and `laserMinSecondsBetween = 0` in the config for testing. Set the level's laser-eligibility flag (debug) → verify the ability can fire: HUD flag goes up via SyncVar, players who keep moving past `laserMaxAllowedSpeed` are downed; players who stop survive.
-11. **Difficulty profile.** Swap to a "Hardcore" `GhostDifficultyProfile` with 2× speed/hearing → confirm all values scale at next state Enter().
+11. **Difficulty profile.** Swap to a more aggressive `GhostDifficultyProfile` (e.g. 2× speed/hearing) → confirm all values scale at next state Enter(). (This is also the profile Hardcore mode would select for ghost scaling — but Hardcore's puzzle/environment/save behavior is out of scope here; see [HardCore-Mode.md](HardCore-Mode.md).)
 
 No automated tests (this is Unity gameplay code); verification is in-editor with the live scene.
 
@@ -236,5 +236,5 @@ No automated tests (this is Unity gameplay code); verification is in-editor with
 - Full down/revive teammate-help system
 - Dissonance proximity for *players hearing each other* (separate task)
 - TheWalker animations/clips (stub adapter ready; clips wire later)
-- Hardcore mode UI toggle (the SO swap mechanism is ready; the menu wiring is its own task)
+- Hardcore mode (full game mode — puzzle amounts, multi-round puzzles, environment toggles, save/wipe rules) — designed in [HardCore-Mode.md](HardCore-Mode.md); the ghost only contributes a `GhostDifficultyProfile` for aggression scaling
 - Always-roam map mode (flag exists in config for future)

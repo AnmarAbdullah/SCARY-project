@@ -23,6 +23,11 @@ namespace TimeFracture.Player
         private bool _isDowned;
         public bool IsDowned => _isDowned;
 
+        // Menu (false) vs Gameplay (true) — the SERVER flips this. Starts false so a
+        // player spawned into the lobby stands still: no camera, no input, free cursor.
+        [SyncVar(hook = nameof(OnControlEnabledChanged))]
+        private bool _controlEnabled;
+
         private PlayerMovement _movement;
         private PlayerInputHandler _input;
         private UnityEngine.Camera[] _cameras;
@@ -63,8 +68,11 @@ namespace TimeFracture.Player
                 idleSway.playerMovement = _movement;
             
             GetComponent<VoiceBroadcastTrigger>().enabled = !isLocalPlayer;
+
+            // Approach A: persist across scene loads (lobby -> level), repositioned not respawned.
+            DontDestroyOnLoad(gameObject);
         }
-        
+
 
         private void Start()
         {
@@ -121,9 +129,9 @@ namespace TimeFracture.Player
 
         public override void OnStartLocalPlayer()
         {
-            SetLocalPlayerState(true);
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            // Apply whatever mode the server has us in (Menu when first spawned into
+            // the lobby, Gameplay once a level is loaded). Does NOT force control on.
+            ApplyControlState(_controlEnabled);
         }
 
         public override void OnStopLocalPlayer()
@@ -132,11 +140,57 @@ namespace TimeFracture.Player
             Cursor.visible = true;
         }
 
+        // ── Menu / Gameplay control (server-driven) ──────────────────────────
+
+        /// <summary>SERVER switch: Menu mode (false) or Gameplay mode (true).</summary>
+        [Server]
+        public void ServerSetControl(bool active) => _controlEnabled = active;
+
+        private void OnControlEnabledChanged(bool _, bool active)
+        {
+            if (isLocalPlayer)
+                ApplyControlState(active);
+        }
+
+        private void ApplyControlState(bool active)
+        {
+            SetLocalPlayerState(active);
+            Cursor.lockState = active ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = !active;
+        }
+
+        // Snap to a pose. Applied on server AND mirrored to clients, so it works
+        // regardless of the NetworkTransform's authority direction.
+        [Server]
+        public void ServerTeleport(Vector3 position, Quaternion rotation)
+        {
+            ApplyTeleport(position, rotation);
+            RpcTeleport(position, rotation);
+        }
+
+        [ClientRpc]
+        private void RpcTeleport(Vector3 position, Quaternion rotation)
+        {
+            ApplyTeleport(position, rotation);
+        }
+
+        private void ApplyTeleport(Vector3 position, Quaternion rotation)
+        {
+            if (_movement != null)
+                _movement.Teleport(position, rotation);
+            else
+                transform.SetPositionAndRotation(position, rotation);
+        }
+
         private void LateUpdate()
         {
-            //if (!HasLocalControl) return;
-            // here
-            // Freeze everything while reading a note
+            if (!HasLocalControl) return;
+
+            // In a networked session, only drive look/movement once the server grants
+            // control (Gameplay mode). In the lobby (Menu mode) the player stands still.
+            if ((NetworkClient.active || NetworkServer.active) && !_controlEnabled)
+                return;
+
             if (cameraLook != null)
             {
                 cameraLook.SetSensitivity(_input.mouseSensitivity);

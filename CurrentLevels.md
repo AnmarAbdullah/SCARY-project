@@ -8,6 +8,11 @@ Forest Environment with a cabin and 3 satellite towers, everything is connected 
 
 Players spawn, and are introduced to the controls and the speaker lady, they walk towards the first level, and are informed about 3 satelite watchtowers by the speaker lady, and that they need to be redirected to a direction where they no longer get a signal, and small monitor beside each satellite to show the current direction in a circle visual. the relay signal will go from 100% to 0% while facing the no signal direction, the relay will keep trying to redirect itself back to signal but the players must fight it till it reaches 0%. They players must also find a small cabin that will contain an audio file and a fuse, the audio file can contain a recording of the creator and the fuses are used to open the gate that will lead to level 2, the players will not be able to travel to level 2 unless all satelites are done, and they must be together at the gate.
 
+> **Implementation status (2026-06-06):**
+> - `Assets/Scripts/Interactables/Satelite.cs` — the per-tower redirect/drain mechanic (signal 100%→0%, fights back), fires `OnCompleted` at 0%.
+> - `Assets/Scripts/Game/Level1Manager.cs` — server-authoritative manager: spawns the satellite prefab onto **random, unique** designer-placed slot transforms (position+rotation, so the offset "computer" canvas never clips), detects each tower done + all towers done. Has scaffolded (TODO) hooks for completion SFX, an all-done voice line, and an optional ghost-attracting `NoiseEvent` on completion.
+> - **Still to build:** the per-tower monitor/circle visual, the cabin (audio log + fuse), the gate + "all towers done AND players regrouped" advance trigger, and Speaker-Lady guidance.
+
 
 
 Level 2:

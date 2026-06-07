@@ -118,6 +118,19 @@ namespace TimeFracture.Player
             _targetCapsuleHeight = isCrouching ? crouchHeight : standHeight;
         }
 
+        /// <summary>Hard-snap the body to a new pose and kill momentum (used for level spawn / teleport).</summary>
+        public void Teleport(Vector3 position, Quaternion rotation)
+        {
+            transform.SetPositionAndRotation(position, rotation);
+            if (_rb != null)
+            {
+                _rb.position        = position;
+                _rb.rotation        = rotation;
+                _rb.velocity        = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+            }
+        }
+
         // ── Private helpers ───────────────────────────────────────────────
 
         private void TryJump()

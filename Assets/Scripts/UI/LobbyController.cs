@@ -39,6 +39,12 @@ namespace ScaryGame.UI
         [Tooltip("Optional. Lobby button that leaves the lobby and returns to the main menu.")]
         [SerializeField] Button leaveLobbyButton;
 
+        [Header("Character (M/F)")]
+        [Tooltip("Center button that switches the local player's body to the MALE skeleton.")]
+        [SerializeField] Button maleButton;
+        [Tooltip("Center button that switches the local player's body to the FEMALE skeleton.")]
+        [SerializeField] Button femaleButton;
+
         [Header("Player list")]
         [Tooltip("One text slot per seat (4 for the 4-player design). Filled with Steam names; unused slots show the empty label.")]
         [SerializeField] TextMeshProUGUI[] playerNameSlots;
@@ -64,6 +70,8 @@ namespace ScaryGame.UI
             if (inviteButton)      inviteButton.onClick.AddListener(OnInviteClicked);
             if (startGameButton)   startGameButton.onClick.AddListener(OnStartGameClicked);
             if (leaveLobbyButton)  leaveLobbyButton.onClick.AddListener(OnLeaveLobbyClicked);
+            if (maleButton)        maleButton.onClick.AddListener(() => OnGenderClicked(PlayerGender.Male));
+            if (femaleButton)      femaleButton.onClick.AddListener(() => OnGenderClicked(PlayerGender.Female));
         }
 
         void Start()
@@ -124,8 +132,35 @@ namespace ScaryGame.UI
                 Debug.LogWarning("[LobbyController] Only the host can start the game.", this);
                 return;
             }
-            // Server → all clients (host's local client included). Each receiver logs the error.
-            NetworkServer.SendToAll(new StartGameMessage());
+
+            // Load the level: ServerChangeScene pulls every client along automatically.
+            if (NetworkManager.singleton is ScaryNetworkManager scaryManager)
+            {
+                scaryManager.ServerStartGame();
+            }
+            else
+            {
+                Debug.LogError("[LobbyController] The active NetworkManager is not a ScaryNetworkManager — " +
+                               "swap the menu's NetworkManager component so Start can load the level.", this);
+            }
+        }
+
+        // Local player picks a body in the lobby. Tell the server via the player's
+        // PlayerAppearance; the choice syncs to everyone.
+        void OnGenderClicked(PlayerGender gender)
+        {
+            NetworkIdentity localPlayer = NetworkClient.localPlayer;
+            if (localPlayer == null)
+            {
+                Debug.LogWarning("[LobbyController] No local player yet — can't switch gender.", this);
+                return;
+            }
+
+            PlayerAppearance appearance = localPlayer.GetComponent<PlayerAppearance>();
+            if (appearance != null)
+                appearance.CmdSetGender(gender);
+            else
+                Debug.LogWarning("[LobbyController] Local player has no PlayerAppearance component.", this);
         }
 
         void OnLeaveLobbyClicked()

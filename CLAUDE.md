@@ -90,7 +90,8 @@ Assets/
 - **Hand-built levels, loaded by index.** No runtime generation. Each level is its own scene/prefab set, with NavMesh baked in-editor. The server tells clients which level scene to load; everyone loads the same authored content.
 - **Server-authoritative gameplay**: interactions, objective state, and the ghost all run on the server. SyncVar + Command/ClientRpc for state propagation (see [NETWORKING.md](NETWORKING.md)).
 - **Ghost AI behavior is unchanged from its original plan** and runs server-only; clients see her via NetworkTransform/NetworkAnimator. Everything she "hears" flows through one `NoiseEventBus`. See [AI-System.md](AI-System.md).
-- **Two player controller systems exist**: `FPSController` (simple) and `PlayerController`+`PlayerMovement` (advanced, primary). The advanced one in `TimeFracture.Player` is the one being used.
+- **Two player controller systems exist**: `FPSController` (simple) and `PlayerController`+`PlayerMovement` (advanced, primary). The advanced `TimeFracture.Player` stack is the one in use, and it lives on **`Assets/Prefabs/Player.prefab`** (NOT `FPS_Player.prefab` — verified 2026-06-06; the prefab carries `PlayerController`/`PlayerMovement`/`PlayerCameraLook`/`PlayerInputHandler`, Rigidbody-based). When gating, teleporting, or spawning the player, target **`PlayerController`**, not `FPSController`.
+- **Lobby → level spine is built** (2026-06-06): one persistent `NetworkManager` (`ScaryNetworkManager`), `DontDestroyOnLoad` players spawned once and **repositioned** per scene (Approach A), and a server-driven **Menu vs Gameplay** control mode on `PlayerController` (`_controlEnabled` SyncVar). Host Start → `ServerChangeScene`. See [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md).
 - **ScriptableObject-driven configuration** for tunable systems (ghost config, footstep profiles, etc.).
 
 ## What's Done
@@ -103,13 +104,15 @@ Assets/
 - TheWalker ghost model (FBX in Assets/Objects/Characters/)
 - Settings system (gameplay/video/audio) — needs UI wiring + Steam Cloud sync
 - Level 1 design + initial prefabs
+- **Lobby → level spine** (host Start loads the level, persistent players spawn/reposition with Menu/Gameplay control mode) — see [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md)
+- **Level 1 satellite manager** (`Level1Manager`: random unique spawn slots, per-tower + all-towers-done detection) — see [CurrentLevels.md](CurrentLevels.md)
 
 ## What's NOT Done (Remaining Work)
 
 ### Critical for Ship
 - **Main Menu UI** -- no menu scene, no play/settings/quit buttons
-- **Lobby / Session System** -- players set up a lobby, join the host (up to 4), host starts the game
-- **Level loading/progression flow** -- load Level N scene, detect objective completion, open gate, advance to N+1
+- **Lobby / Session System** -- host/invite/player-list + host Start **DONE** (2026-06-06); still pending: save slots, Find-Game browser, reject-late-joiners, player-left handling (see [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md))
+- **Level loading/progression flow** -- level **load + player spawn DONE**; still pending: detect objective completion, open gate, advance to N+1 (needs `LevelManager` — distinct from the satellite `Level1Manager`)
 - **Level 1 & 2 objective mechanics** -- signal towers (relay redirect), cabin power + sequential-lever puzzle
 - **Levels 3–7 design + build** -- still being planned
 - **Speaker Lady dialogue system** -- triggered voice guidance per objective/level
@@ -154,8 +157,8 @@ Assets/
 |---|---|
 | Per-level objective designs | [CurrentLevels.md](CurrentLevels.md) |
 | Ghost AI plan | [AI-System.md](AI-System.md) |
-| Player prefab (advanced) | `Assets/Prefabs/FPS_Player.prefab` |
-| Player prefab (simple) | `Assets/Prefabs/Player.prefab` |
+| Player prefab — **IN USE** (advanced `PlayerController` stack) | `Assets/Prefabs/Player.prefab` |
+| Player prefab — legacy/alt (`FPSController`-based) | `Assets/Prefabs/FPS_Player.prefab` |
 | Ghost model | `Assets/Objects/Characters/The Walker/TheWalker_final.fbx` |
 | Level 1 prefabs | `Assets/Prefabs/Level 1/` |
 | Dissonance integration | `Assets/Dissonance/Integrations/MirrorIgnorance/` |
