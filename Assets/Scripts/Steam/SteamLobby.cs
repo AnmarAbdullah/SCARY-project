@@ -263,8 +263,12 @@ namespace ScaryGame.Steam
             var nm = NetworkManager.singleton;
             if (nm == null) { SetBusy(false); Report("No NetworkManager in scene"); return; }
 
-            RehookClientEvents();
             nm.StartHost();
+            // Re-hook AFTER Start, not before. StartHost/StartClient call Mirror's
+            // RegisterClientMessages(), which *assigns* (=) NetworkClient.OnConnectedEvent /
+            // OnDisconnectedEvent to Mirror's own internal handlers — clobbering anything
+            // subscribed earlier. Hooking here is what keeps our handlers alive.
+            RehookClientEvents();
 
             // Host is ready immediately (its own local client). End the busy state.
             SetBusy(false);
@@ -312,9 +316,17 @@ namespace ScaryGame.Steam
 
             Debug.Log($"[SteamLobby] Lobby entered. ID={CurrentLobbyID.m_SteamID} HostSteamID={hostAddress}", this);
 
-            RehookClientEvents();
             nm.networkAddress = hostAddress;   // FizzySteamworks reads this as host's SteamID
             nm.StartClient();
+            // Re-hook AFTER StartClient, not before. StartClient calls Mirror's
+            // RegisterClientMessages(), which *assigns* (=) NetworkClient.OnConnectedEvent /
+            // OnDisconnectedEvent to Mirror's own internal handlers, wiping out anything
+            // subscribed before it. The transport connects asynchronously, so OnConnectedEvent
+            // cannot have fired during this synchronous call — hooking here is safe and is what
+            // makes HandleClientConnected actually run → OnLobbyJoined (panel swap) + busy clear.
+            // Without this ordering the joiner spawns but never leaves the menu, then the 15s
+            // busy-timeout tears the connection down (the "kicked after ~10s" bug).
+            RehookClientEvents();
             // NOTE: OnLobbyJoined is fired from HandleClientConnected once Mirror actually connects,
             // so the busy/blocker stays up until the connection succeeds or times out.
         }

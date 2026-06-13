@@ -10,6 +10,7 @@ public abstract class Interactable : NetworkBehaviour
         HoldFree
     };
 
+    [SyncVar] public bool isInteractable = true;
     [SyncVar] public bool isOccupied;
     [SyncVar] public bool isDone;
     
@@ -33,6 +34,12 @@ public abstract class Interactable : NetworkBehaviour
     public void CmdCancelInteract()
     {
         isOccupied = false;
+    }
+
+    [Server]
+    public void SetIsInteractable(bool value)
+    {
+        isInteractable = value;
     }
     
     protected void CompleteInteraction()

@@ -72,6 +72,8 @@ namespace ScaryGame.Game
         public event Action OnAllSatellitesCompleted;
 
         private bool _allCompleteFired;
+        
+        [SerializeField] GateButton gateButton;
 
         public override void OnStartServer()
         {
@@ -120,7 +122,7 @@ namespace ScaryGame.Game
                 GameObject instance = Instantiate(satellitePrefab, slot.position, slot.rotation);
                 NetworkServer.Spawn(instance);
 
-                Satelite satellite = instance.GetComponent<Satelite>();
+                Satelite satellite = instance.GetComponentInChildren<Satelite>();
                 if (satellite == null)
                 {
                     Debug.LogError("[Level1Manager] Satellite prefab has no Satelite component.", instance);
@@ -185,7 +187,11 @@ namespace ScaryGame.Game
             // TODO: Speaker Lady voice line, then unlock the gate to Level 2
             //       (players still need to find the cabin fuse + regroup at the gate).
             PlaySfx(allCompletedVoiceLine);
-
+            
+            //Remove electricity particle effect on button... and make it isInteractable
+            
+            gateButton.MakeButtonInteractable();
+            
             OnAllSatellitesCompleted?.Invoke();
         }
 
@@ -202,6 +208,7 @@ namespace ScaryGame.Game
                 source != null ? source.gameObject : gameObject));
         }
 
+        
         private void PlaySfx(AudioClip clip)
         {
             // Placeholder until audio is wired. Networked playback (ClientRpc) can

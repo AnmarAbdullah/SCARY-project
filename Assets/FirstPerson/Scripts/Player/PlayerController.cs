@@ -246,5 +246,11 @@ namespace TimeFracture.Player
             foreach (AudioListener audioListener in _audioListeners)
                 audioListener.enabled = active;
         }
+
+        [ContextMenu("Force Enable Player Movement")]
+        public void ForceEnablePlayerMovement()
+        {
+            ServerSetControl(true);
+        }
     }
 }

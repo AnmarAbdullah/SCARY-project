@@ -52,7 +52,7 @@ public class PlayerInteract : NetworkBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit, interactRange))
         {
             Interactable interactable = hit.collider.GetComponentInParent<Interactable>();
-            if (interactable != null && interactable.CompareTag("Interact"))
+            if (interactable != null && interactable.CompareTag("Interact") && interactable.isInteractable)
             {
                 if (interactable.isDone)
                 {
@@ -128,9 +128,10 @@ public class PlayerInteract : NetworkBehaviour
         if (currentInteractable != null)
         {
             currentInteractable.OnCompleted -= ResetHold;
-            if (isHolding) 
+            if (isHolding)
             {
                 currentInteractable.OnHoldCancelled();
+                currentInteractable.CmdCancelInteract();
                 ResetHold();
             }
         }
