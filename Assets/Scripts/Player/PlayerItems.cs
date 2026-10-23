@@ -40,6 +40,7 @@ public class PlayerItems : NetworkBehaviour
         HandlePickupRay();
         HandleItemScroll();
         HandleUse();
+        HandleDrop();
     }
 
     private void LateUpdate()
@@ -160,6 +161,15 @@ public class PlayerItems : NetworkBehaviour
     {
         if (pickupPrompt != null && pickupPrompt.activeSelf != active)
             pickupPrompt.SetActive(active);
+    }
+
+    private void HandleDrop()
+    {
+        if (_activeItem == null || !Input.GetKeyDown(KeyCode.G))
+            return;
+
+        if (_activeItem.TryGetComponent(out NetworkItemPickup pickup))
+            pickup.CmdDrop();
     }
 
     public static Transform FindDeepChild(Transform root, string childName)

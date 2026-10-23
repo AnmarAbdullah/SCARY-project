@@ -11,12 +11,12 @@ public class GateButton : Interactable
     {
         CmdOpenGate();
     }
-    
+
     [Command(requiresAuthority = false)]
     private void CmdOpenGate()
     {
-        if (isDone) return;
-        
+        if (isDone || !isInteractable) return;
+
         CompleteInteraction();
         RpcOpenGate();
     }
@@ -27,7 +27,8 @@ public class GateButton : Interactable
         gateAnim.SetTrigger("Open");
     }
 
-    [ClientRpc]
+    // isInteractable is a SyncVar and must only be set on the server.
+    [Server]
     public void MakeButtonInteractable()
     {
         isInteractable = true;

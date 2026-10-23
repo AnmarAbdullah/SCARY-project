@@ -182,6 +182,15 @@ namespace TimeFracture.Player
                 transform.SetPositionAndRotation(position, rotation);
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // Debug: host presses Numpad 0 to unlock movement when testing a level scene directly.
+        private void Update()
+        {
+            if (isServer && UnityEngine.Input.GetKeyDown(KeyCode.Keypad0))
+                ForceEnablePlayerMovement();
+        }
+#endif
+
         private void LateUpdate()
         {
             if (!HasLocalControl) return;

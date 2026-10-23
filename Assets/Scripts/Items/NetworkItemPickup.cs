@@ -1,15 +1,11 @@
 using Mirror;
 using UnityEngine;
-using ScaryGame.Game;
-using ScaryGame.Items;
-using ScaryGame.Noise;
 
 [RequireComponent(typeof(Item))]
 [RequireComponent(typeof(NetworkIdentity))]
 public class NetworkItemPickup : NetworkBehaviour
 {
     [SerializeField] private float serverPickupRange = 4f;
-    [SerializeField] private float coreNoiseHearRadius = 40f;
 
     [SyncVar(hook = nameof(OnPickedByChanged))]
     private NetworkIdentity _pickedBy;
@@ -29,19 +25,19 @@ public class NetworkItemPickup : NetworkBehaviour
         _pickedBy = pickerIdentity;
         ApplyPickedUp(pickerIdentity);
         RpcOnPickedUp(pickerIdentity);
+    }
 
-        if (TryGetComponent<CoreItemMarker>(out _))
-        {
-            NoiseEventBus.Emit(new NoiseEvent(
-                position: transform.position,
-                type: NoiseType.CorePickup,
-                intensity: 1f,
-                hearingRadius: coreNoiseHearRadius,
-                source: gameObject));
+    [Command(requiresAuthority = false)]
+    public void CmdDrop(NetworkConnectionToClient sender = null)
+    {
+        if (_pickedBy == null) return;
 
-            if (CoreGameState.Instance != null)
-                CoreGameState.Instance.NotifyCorePickedUp(netIdentity);
-        }
+        if (sender == null || sender.identity != _pickedBy) return;
+        
+        NetworkIdentity dropper = _pickedBy;
+        _pickedBy = null;
+        ApplyDrop(dropper);
+        RpcOnDrop(dropper);
     }
 
     public override void OnStartClient()
@@ -54,6 +50,12 @@ public class NetworkItemPickup : NetworkBehaviour
     private void RpcOnPickedUp(NetworkIdentity pickerIdentity)
     {
         ApplyPickedUp(pickerIdentity);
+    }
+    
+    [ClientRpc]
+    private void RpcOnDrop(NetworkIdentity dropperIdentity)
+    {
+        ApplyDrop(dropperIdentity);
     }
 
     private void OnPickedByChanged(NetworkIdentity oldPicker, NetworkIdentity newPicker)
@@ -81,11 +83,34 @@ public class NetworkItemPickup : NetworkBehaviour
             playerItems.RefreshItems();
     }
 
+    private void ApplyDrop(NetworkIdentity dropperIdentity)
+    {
+        SetDroppedState();
+        transform.SetParent(null, true);
+        
+        if (dropperIdentity.TryGetComponent(out PlayerItems playerItems))
+            playerItems.RefreshItems();
+    }
+
     private void SetPickedUpState()
     {
         foreach (Collider itemCollider in GetComponentsInChildren<Collider>())
             itemCollider.enabled = false;
-
+        
+        if(TryGetComponent<Rigidbody>(out Rigidbody rb))
+            rb.isKinematic = true;
+        
         gameObject.tag = "Untagged";
+    }
+
+    private void SetDroppedState()
+    {
+        foreach (Collider itemCollider in GetComponentsInChildren<Collider>())
+            itemCollider.enabled = true;
+        
+        if(TryGetComponent<Rigidbody>(out Rigidbody rb))
+            rb.isKinematic = false;
+
+        gameObject.tag = "Pickable";
     }
 }

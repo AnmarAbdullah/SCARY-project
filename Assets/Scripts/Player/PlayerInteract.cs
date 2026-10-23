@@ -18,7 +18,15 @@ public class PlayerInteract : NetworkBehaviour
         if (cameraTransform == null && Camera.main != null)
             cameraTransform = Camera.main.transform;
     }
-    
+
+    public override void OnStartClient()
+    {
+        // Non-local player prefabs spawn with the prompt active (Screen Space - Overlay
+        // canvas starts enabled). Hide it so other players' canvases don't show on screen.
+        if (!isLocalPlayer)
+            SetInteractablePrompt(false);
+    }
+
     private void Update()
     {
         if (!HasLocalControl)
@@ -63,29 +71,26 @@ public class PlayerInteract : NetworkBehaviour
 
                 if (currentInteractable != interactable)
                     SetCurrent(interactable);
-                
+
                 SetInteractablePrompt(true);
 
                 if (Input.GetKeyDown(KeyCode.F) && currentInteractable != null)
                 {
-                    
                     if (currentInteractable.isOccupied || currentInteractable.isDone) return;
-                    
-                    if(currentInteractable.interactionType == Interactable.InteractionType.Press)
-                        currentInteractable.OnInteractPress();
 
+                    if (currentInteractable.interactionType == Interactable.InteractionType.Press)
+                        currentInteractable.OnInteractPress();
                     else
                     {
                         isHolding = true;
                         currentInteractable.CmdStartInteract();
                     }
-
                 }
 
                 if (isHolding)
                 {
                     timer += Time.deltaTime;
-                    currentInteractable.OnHoldUpdate(timer);  // fires every frame while holding
+                    currentInteractable.OnHoldUpdate(timer);
                 }
 
                 if (Input.GetKeyUp(KeyCode.F) && isHolding)
@@ -94,20 +99,18 @@ public class PlayerInteract : NetworkBehaviour
                     currentInteractable.CmdCancelInteract();
                     ResetHold();
                 }
+
+                return;
             }
 
-            if (interactable == null || !interactable.CompareTag("Interact"))
-            {
-                SetCurrent(null);
-                SetInteractablePrompt(false);
-            }
-
+            // Ray hit something but it is not a valid/active interactable — hide prompt.
+            SetCurrent(null);
+            SetInteractablePrompt(false);
             return;
         }
 
         SetCurrent(null);
         SetInteractablePrompt(false);
-
     }
 
     void SetInteractablePrompt(bool show)
@@ -122,7 +125,7 @@ public class PlayerInteract : NetworkBehaviour
         timer = 0;
         SetInteractablePrompt(false);
     }
-    
+
     void SetCurrent(Interactable next)
     {
         if (currentInteractable != null)
