@@ -89,7 +89,7 @@ Assets/
 
 - **Hand-built levels, loaded by index.** No runtime generation. Each level is its own scene/prefab set, with NavMesh baked in-editor. The server tells clients which level scene to load; everyone loads the same authored content.
 - **Server-authoritative gameplay**: interactions, objective state, and the ghost all run on the server. SyncVar + Command/ClientRpc for state propagation (see [NETWORKING.md](NETWORKING.md)).
-- **Ghost AI behavior is unchanged from its original plan** and runs server-only; clients see her via NetworkTransform/NetworkAnimator. Everything she "hears" flows through one `NoiseEventBus`. See [AI-System.md](AI-System.md).
+- **Ghost AI was redesigned (Oct 2026), deliberately simple:** she **roams** every level on her own; only **major sounds** (puzzle mistakes, lure events, noise device) draw her in, via `NoiseEventBus.EmitMajorNoise`; she chases what she sees and **downs** players she catches. No base, no power cores, no laser. Per-level `GhostDifficultyProfile` makes her stronger each level. Runs server-only; clients see her via NetworkTransform/NetworkAnimator. See [AI-System.md](AI-System.md).
 - **Two player controller systems exist**: `FPSController` (simple) and `PlayerController`+`PlayerMovement` (advanced, primary). The advanced `TimeFracture.Player` stack is the one in use, and it lives on **`Assets/Prefabs/Player.prefab`** (NOT `FPS_Player.prefab` — verified 2026-06-06; the prefab carries `PlayerController`/`PlayerMovement`/`PlayerCameraLook`/`PlayerInputHandler`, Rigidbody-based). When gating, teleporting, or spawning the player, target **`PlayerController`**, not `FPSController`.
 - **Lobby → level spine is built** (2026-06-06): one persistent `NetworkManager` (`ScaryNetworkManager`), `DontDestroyOnLoad` players spawned once and **repositioned** per scene (Approach A), and a server-driven **Menu vs Gameplay** control mode on `PlayerController` (`_controlEnabled` SyncVar). Host Start → `ServerChangeScene`. See [Lobby, level loading design.md](Lobby,%20level%20loading%20design.md).
 - **ScriptableObject-driven configuration** for tunable systems (ghost config, footstep profiles, etc.).
@@ -120,7 +120,7 @@ Assets/
 - **Steam SDK Integration** -- Steamworks not installed (see [STEAM_CLOUD.md](STEAM_CLOUD.md))
 - **Settings Menu UI** -- settings system exists; needs UI wiring + Cloud sync
 - **Win/Lose & progression** -- level-fail handling, campaign-complete flow, return to menu
-- **Ghost AI implementation** -- build out the plan in [AI-System.md](AI-System.md) (behavior stays as planned)
+- **Ghost AI implementation** -- build the simple roam / major-sound design in [AI-System.md](AI-System.md); then place a `GhostSpawner` + baked NavMesh in each level
 - **Ghost model integration** -- TheWalker FBX wired to the ghost prefab + animations
 - **Player Models** -- 3rd-person model other players can see
 - **Proximity Voice Chat** -- Dissonance integrated but not distance-based yet
